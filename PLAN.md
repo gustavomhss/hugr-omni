@@ -281,7 +281,7 @@ Windows em runtime e os alvos arm64 são provados no CI do bundle. Uma falha lá
 
 | Bundle | Conteúdo | CI |
 |---|---|---|
-| B0 | Fase 0: pesquisa + ADRs (só docs) | check de docs; spikes usam `workflow_dispatch` nos próprios branches |
+| B0 | Fase 0: pesquisa + ADRs (só docs) | check de docs; cada spike tem um workflow próprio, disparado só por push no seu branch `spike/*` (o código do spike nunca entra em main) |
 | B1 | Fundação: W00, W01, W02 | rápido |
 | B2 | Núcleo: W03, W05, W06, W07, W09, W10 | rápido → completo |
 | B3 | PTY: W12, W12w | rápido → completo |
@@ -646,7 +646,10 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 |---|---|---|---|
 | R1 | em execução | — | dispatch 2026-10-01 |
 | R2 | em execução | — | dispatch 2026-10-01 |
-| S1, S2, S3 | pronto para dispatch | — | aguardando o repo |
+| S1 | em execução | `spike/process` | dispatch 2026-10-01 · Opus |
+| S2 | em execução | `spike/pty` | dispatch 2026-10-01 · Opus |
+| S3 | em execução | `spike/packaging` | dispatch 2026-10-01 · Sonnet |
+| B0 | montando | `bundle/B0` | recebe pesquisa + ADRs + G0 |
 | demais | não iniciado | — | W00 aguarda G0 + D5 |
 
 ---
