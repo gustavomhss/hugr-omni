@@ -673,11 +673,14 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 | WP | Estado | Branch / PR | Notas |
 |---|---|---|---|
-| R1 | em execução | — | dispatch 2026-10-01 |
 | R2 | em execução | — | dispatch 2026-10-01 |
-| S1 | em execução | `spike/process` | dispatch 2026-10-01 · Opus |
-| S2 | em execução | `spike/pty` | dispatch 2026-10-01 · Opus |
-| S3 | em execução | `spike/packaging` | dispatch 2026-10-01 · Sonnet |
+| R1 | concluído | `docs/research/landscape.md` | achou o processkit (Rust + Python, MIT): 81,8% nos 3 OS |
+| S1 | pausado | `spike/process` (só local) | perguntas cobertas pelo processkit; volta se a avaliação reprovar |
+| S2 | pausado | `spike/pty` (só local) | idem |
+| S3 | em execução | `spike/packaging` | + Q7: addon napi sobre o processkit nos 5 alvos |
+| P0 | em execução | `docs/research/processkit-fit.md` | encaixe do contrato no processkit (Y/A/U/X por item) |
+| E1 | em execução | `spike/processkit-eval` | avaliação prática do processkit nos 3 OS com KPIs + a suíte deles |
+| Codex | em execução | — | auditoria independente do código-fonte do processkit v3.3.4 |
 | B0 | montando | `bundle/B0` | recebe pesquisa + ADRs + G0 |
 | demais | não iniciado | — | W00 aguarda G0 + D5 |
 
@@ -795,4 +798,5 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
+- 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).
