@@ -1,0 +1,9 @@
+/target
+node_modules/
+*.node
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+*.whl
+.DS_Store
