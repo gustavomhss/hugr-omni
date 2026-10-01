@@ -87,6 +87,7 @@ Sandbox (phases 2–3):
 | REL-02 | ≥ 2 design partners in different languages (= K11) — judged | Owner |
 | UX-01 | Cold-user test (= K10) — judged | Q2 |
 | SCF-01 | Scaffold compiles on 3 OS; stubs return errors, never panic | W00 |
+| ARC-FS | God-file guard: no tracked code file over 650 lines (`scripts/file-size-guard.py`, teeth in `scripts/test_file_size_guard.py`); wired into CI by W00 and run on every bundle | W00 |
 | FIX-01 | Fixture implements FIXTURE.md on 3 OS | W01 |
 | ACC-01 | Every contract item has a red scenario + `sys`/`pty` seam suites | W01 |
 | ACC-02 | TS and Python runners execute the same scenarios; idiom tests for C-TS-01 / C-PY-01 | W02 |

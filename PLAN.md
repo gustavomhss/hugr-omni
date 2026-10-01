@@ -15,6 +15,7 @@
 - **Como construímos rápido:** 31 work packages (WPs), até 6 agentes em paralelo, cada um em worktree própria, com o contrato da API congelado antes. Os WPs se juntam em **7 PRs em bundle**, e o CI completo roda uma vez por bundle.
 - **Como garantimos qualidade:** cada WP é revisado a frio pelo Codex **contra o próprio card** (completude, sucesso, invariantes, qualidade, DoD, com veredito campo a campo) e verificado pelo lead antes de entrar no bundle.
 - **Como evitamos overengineering:** uma API com no máximo 16 conceitos, a regra de paridade (cada feature custa 3×) e um "não fazer" explícito em cada WP. Nada de teste por teste.
+- **Como o código fica organizado:** monolito modular, com módulos de responsabilidade única e dependências apontando só para baixo. Nenhum arquivo de código passa de 650 linhas: o ideal é ≤400, até 600 está ok, 601–650 é tolerado com aviso. O `scripts/file-size-guard.py` falha o gate acima disso (documentos ficam fora).
 - **Prazo (estimativa grosseira):** Fase 0 em 3–5 dias; Fase 1 em ~2 semanas de relógio. O release depende dos design partners.
 
 ---
@@ -30,6 +31,7 @@
 | D5 | **Aprovar o contrato da API (seção 3)** | ⏳ pendente: bloqueia o W00, não bloqueia a Fase 0 |
 | D6 | Estratégia de testes: contrato enxuto + QA com KPIs | ✅ diretriz do Owner (2026-10-01) |
 | D7 | PRs em bundle para economizar CI | ✅ diretriz do Owner (2026-10-01) |
+| D8 | Monolito modular + god-file guard (400 ideal · 600 ok · 650 máximo por arquivo de código; não vale para documentos; é por arquivo, não por PR) | ✅ diretriz do Owner (2026-10-01) |
 
 Também ficam com você, em paralelo e sem bloquear o build:
 - conversas com ≥5 maintainers (G0-05);
@@ -56,6 +58,8 @@ Também ficam com você, em paralelo e sem bloquear o build:
 - Sem opção fora do contrato.
 - Spikes produzem decisões, não código para main.
 - Testes determinísticos só onde guardam uma promessa pública. O resto se prova usando de verdade e medindo.
+
+**Monolito modular, sem god files.** Um núcleo único (uma crate), dividido em módulos de responsabilidade única com dependências só para baixo (seção 3, "Arquitetura interna"). Arquivo de código: ideal ≤400 linhas, ok até 600, máximo absoluto 650. Passou disso, o arquivo é dividido; não existe lista de exceções.
 
 **Rigor não se negocia.** Gate vermelho se corrige na raiz. Nenhuma dívida ou supressão entra sem um waiver escrito e assinado pelo Owner.
 
@@ -158,6 +162,27 @@ Numa corrida entre eventos, ganha o que aconteceu primeiro. No Windows, códigos
 - Se a raiz sai mas um descendente segura o pipe, `run()` devolve o que tiver lido em até `graceMs` e mata o resto. Para processos de fundo de longa duração, use `spawn()`.
 - Nunca há shell.
 
+### Arquitetura interna (monolito modular)
+
+Uma crate (`hugr-omni`), um módulo por responsabilidade, cada módulo com um `mod.rs` que é a sua fachada (o seam congelado no W00) e arquivos pequenos atrás dela:
+
+| Módulo | Responsabilidade | Pode depender de | Dono |
+|---|---|---|---|
+| `api/` | superfície pública: `Command`, `Child`, `run`, tipos (`Exit`, `Chunk`, ...) | `process`, `io`, `spawn`, `pty`, `error` | W00 (congelado) |
+| `process/` | ciclo de vida: árvore e kill (`tree`), `Exit` (`exit`), timeout/cancelamento (`supervise`), limpeza na saída do host (`registry`) | `spawn`, `io`, `pty`, `sys`, `error` | W07, W09 |
+| `spawn/` | do pedido ao comando pronto: `resolve`, `env`, `validate` | `sys`, `error` | W03 |
+| `io/` | saída (`out`, `decode`), stdin (`stdin`), coleta do `run` (`collect`) | `error` | W10 |
+| `pty/` | sessão PTY (`session`) + backends `unix/` e `windows/` | `sys`, `io`, `error` | W12, W12w |
+| `sys/` | primitivas do OS: `unix/` (grupo, sinais, wait) e `windows/` (Job, linha de comando, spawn) | `error` | W05, W06 |
+| `error/` | `Error` + códigos (`mod.rs`, congelado) e textos (`messages`) | — | W00, W03 |
+| `sandbox/` (Fase 2) | `policy` + backends `macos`, `linux/`, `windows/` | `sys`, `error` | SB1–SB6 |
+
+Regras:
+- As dependências só apontam para baixo na tabela. `sys/` e os backends de `pty/` nunca importam `api`, `process` ou `spawn`.
+- `lib.rs` só reexporta `api` e `error`; o resto é `pub(crate)`.
+- Os bindings são crates separadas e só enxergam a API pública (o compilador garante). Dentro de cada binding a divisão é por responsabilidade: `child`, `run`, `error`, `convert`.
+- Um arquivo que encosta em 600 linhas é dividido dentro do mesmo módulo antes de virar problema.
+
 ---
 
 ## 4. Como provamos que funciona
@@ -213,6 +238,8 @@ O baseline do stdlib roda os mesmos workloads e registra os K1/K2 dele. A difere
 - **INV-11** `unsafe` só em `sys/`, `pty/`, `sandbox/` e na fronteira FFI, sempre com `// SAFETY:`.
 - **INV-12** Dependência nova só com aprovação do lead (allowlist no `AGENTS.md`).
 - **INV-13** Testes de contrato são somente-leitura para quem implementa.
+- **INV-14** Nenhum arquivo de código rastreado passa de 650 linhas (`scripts/file-size-guard.py`; documentos e dados ficam fora). Não há lista de exceções.
+- **INV-15** Camadas do monolito: dependências só para baixo na tabela "Arquitetura interna"; nenhum módulo importa uma camada acima.
 
 ### 4.4 Quality standards globais (QS)
 
@@ -223,6 +250,7 @@ O baseline do stdlib roda os mesmos workloads e registra os K1/K2 dele. A difere
 - **QS-05** Mensagens de erro: o quê + valor + causa provável + correção.
 - **QS-06** O diff toca só o write-set do WP. Commits convencionais.
 - **QS-07** Código simples: sem abstração sem segundo uso, sem opção fora do contrato, sem teste sem valor.
+- **QS-08** Tamanho de arquivo: ideal ≤400 linhas, ok até 600; entre 601 e 650 o guard avisa e a revisão pede o plano de divisão.
 
 ### 4.5 Definition of Done global (por WP)
 
@@ -234,6 +262,7 @@ O baseline do stdlib roda os mesmos workloads e registra os K1/K2 dele. A difere
 - **D6** O lead faz mutation probe em 1 item do WP (quebra, vê vermelho, restaura).
 - **D7** Só o write-set mudou (`git diff --name-only`).
 - **D8** Doc e CHANGELOG atualizados se o comportamento público mudou.
+- **D10** `python3 scripts/file-size-guard.py` verde (nenhum arquivo acima de 650) e nenhuma importação que viole as camadas (INV-15).
 - **D9** O agente para em "branch `wp/<id>` empurrada, verde localmente, aguardando o lead". Quem integra no bundle é o lead.
 
 Windows em runtime e os alvos arm64 são provados no CI do bundle. Uma falha lá volta para o WP dono do item.
@@ -406,10 +435,10 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
   - `Cargo.toml` (`members = ["crates/*", "bindings/*"]`), `rust-toolchain.toml`;
   - `AGENTS.md` e `CLAUDE.md`;
   - `GUARANTEES.md`, `docs/glossary.md`, `conformance/SPEC.md`, `conformance/FIXTURE.md`;
-  - `crates/hugr-omni/**` (API pública documentada, corpos stub, seams `sys/mod.rs` e `pty/mod.rs`);
+  - `crates/hugr-omni/src/{lib.rs, api/**, error/mod.rs}` (API pública documentada, corpos stub) e a fachada `mod.rs` de cada módulo (`spawn`, `process`, `io`, `pty`, `sys`): os seams congelados;
   - `bindings/node/{index.d.ts,package.json}`, `bindings/python/{pyproject.toml,python/hugr_omni/*.pyi}`;
   - `.github/workflows/{core,windows}.yml`, `.github/review/schema.json`.
-- **Completude:** SCF-01 (compila nos 3 OS; os stubs retornam erro, nunca panic).
+- **Completude:** SCF-01 (compila nos 3 OS; os stubs retornam erro, nunca panic; `file-size-guard` e seus testes de dentes registrados no `core.yml`).
 - **Sucesso:** qualquer WP pode ser despachado sem nenhuma pergunta de interface.
 - **Invariantes:** contrato mínimo; DSL de cenários com ≤10 passos; hash do contrato registrado.
 - **Qualidade:** doc pública escrita primeiro (README-driven); os quickstarts compilam.
@@ -435,7 +464,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** criar cenário.
 
 #### W03 · Resolução, ambiente e erros
-- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/{resolve,env,error,validate}.rs`
+- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/spawn/{resolve,env,validate}.rs`, `crates/hugr-omni/src/error/messages.rs`
 - **Completude:** C-SPAWN-01, C-SPAWN-03, C-ENV-01, C-ERR-01, C-ERR-02.
 - **Sucesso:** `run("npm", …)` funciona igual nos 3 OS, e cada erro diz como consertar.
 - **Invariantes:**
@@ -448,7 +477,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** cache de resolução; expansão de variáveis.
 
 #### W05 · `sys/unix`
-- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/sys/unix.rs`
+- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/sys/unix/**`
 - **Completude:** SYS-U.
 - **Sucesso:** o W07 mata árvores no Linux e no macOS sem nenhum `cfg` fora deste arquivo.
 - **Invariantes:** toda syscall checada; nunca sinalizar um grupo já colhido; `CLOEXEC` em tudo.
@@ -466,7 +495,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** ConPTY.
 
 #### W07 · Child: kill de árvore e saída
-- **Agente:** Opus · **Depende:** W05, W06 · **Escreve:** `crates/hugr-omni/src/{child,exit}.rs`
+- **Agente:** Opus · **Depende:** W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{tree,exit}.rs`
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-SCOPE-01.
 - **Sucesso:** depois de `kill()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
 - **Invariantes:** `kill` idempotente; `drop` não bloqueia; `wait` tem uma fonte única de verdade; `Exit` vem de uma função pura.
@@ -475,7 +504,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** timeout e cancelamento.
 
 #### W09 · Supervisão: timeout, cancelamento, host
-- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/{supervise,registry}.rs`
+- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/process/{supervise,registry}.rs`
 - **Completude:** C-TMO-01, C-TMO-02, C-HOST-01 (host Rust), C-RS-01, C-RS-02 (todos os cenários via API Rust; a prova nos 5 alvos vem no CI completo do B2).
 - **Sucesso:** timeout e cancelamento nunca deixam nada para trás; o host sair limpa tudo, no tier declarado.
 - **Invariantes:** cada waiter resolve exatamente uma vez; o registry tem só `register`/`unregister`/`kill_all`; nada bloqueia o executor.
@@ -484,7 +513,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** tratar sinais do host além do que o ADR-0002 decidir.
 
 #### W10 · IO + `run()`
-- **Agente:** Opus · **Depende:** W01 (o `run` integra com W07) · **Escreve:** `crates/hugr-omni/src/io/**`, `crates/hugr-omni/src/run.rs`
+- **Agente:** Opus · **Depende:** W01 (o `run` integra com W07) · **Escreve:** `crates/hugr-omni/src/io/{out,decode,stdin,collect}.rs`
 - **Completude:** C-IO-01, C-IO-02, C-IO-03, C-IO-04, C-RUN-01.
 - **Sucesso:** ler só o começo da saída de um dev server não o congela; `run()` resolve o caso de 80% numa linha.
 - **Invariantes:**
@@ -498,16 +527,16 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** parsing de linhas; strip de ANSI.
 
 #### W12 · PTY: Unix + integração
-- **Agente:** Opus · **Depende:** W05, W07, W10, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/{mod,unix}.rs`
+- **Agente:** Opus · **Depende:** W05, W07, W10, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/session.rs`, `crates/hugr-omni/src/pty/unix/**`
 - **Completude:** PTYSYS-U, C-PTY-01, C-PTY-02, C-PTY-03, C-PTY-04.
 - **Sucesso:** bash/python interativo, resize, Ctrl-C e saída sem perda, igual em 3 OS (com o W12w).
 - **Invariantes:** o PTY usa o mesmo modelo de grupo/Job e o mesmo `io`; falha de setup não vaza nada.
-- **Qualidade:** `mod.rs` sem `cfg`, com ≤ ~200 linhas.
+- **Qualidade:** `session.rs` sem `cfg`, com ≤ ~200 linhas.
 - **DoD:** QA-C local (bash, python, node) com K2 = 0.
 - **Não fazer:** emulador de terminal.
 
 #### W12w · ConPTY
-- **Agente:** Opus · **Depende:** W06, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/windows.rs`
+- **Agente:** Opus · **Depende:** W06, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/windows/**`
 - **Completude:** PTYSYS-W.
 - **Sucesso:** o travamento clássico do ConPTY (o filho sai e a leitura nunca termina) não acontece em 200 execuções.
 - **Invariantes:** o filho nasce no Job; o fechamento segue a ordem do ADR-0003.
@@ -516,7 +545,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** Unix.
 
 #### W13 · Binding Node/Bun/Deno
-- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/node/{src,lib}/**`, `bindings/node/index.js`
+- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/node/{src,lib}/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/node/index.js`
 - **Completude:** C-TS-01 (idiomas e host TS), C-TS-02 (todos os cenários via TS em Node 22/24, Bun e Deno).
 - **Sucesso:** os quickstarts TS da seção 3 rodam como estão escritos, nos 3 runtimes.
 - **Invariantes:** zero lógica de processo em JS; o GC nunca mata o filho; hook de saída do host conforme o ADR-0002.
@@ -525,7 +554,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** mexer em `package.json` (é do W14).
 
 #### W15 · Binding Python
-- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/python/src/**`, `bindings/python/python/hugr_omni/{__init__,aio}.py`
+- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/python/src/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/python/python/hugr_omni/{__init__,aio}.py`
 - **Completude:** C-PY-01 (idiomas e host Python), C-PY-02 (todos os cenários via Python sync e aio, em 3.10 e 3.14).
 - **Sucesso:** os quickstarts Python rodam como estão escritos.
 - **Invariantes:** o GIL é solto em toda espera; `KeyboardInterrupt` e cancelamento matam a árvore e propagam; `.pyi` intocados.
@@ -594,7 +623,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** Windows.
 
 #### SB1 · Política, plumbing e bindings
-- **Agente:** Sonnet · **Depende:** S4 · **Escreve:** `crates/hugr-omni/src/sandbox/{mod,policy}.rs`, `bindings/*/src/sandbox.rs`
+- **Agente:** Sonnet · **Depende:** S4 · **Escreve:** `crates/hugr-omni/src/sandbox/{mod,policy}.rs` (fachada + política), `bindings/*/src/sandbox.rs`
 - **Completude:** C-SBX-01.
 - **Sucesso:** o dev escreve a política uma vez e ela vale igual com ou sem PTY, nas 3 linguagens.
 - **Invariantes:** fail-closed absoluto; política inválida nunca vira política mais fraca.
@@ -612,7 +641,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** expor Seatbelt cru na API.
 
 #### SB3 · Backend Linux
-- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/linux.rs`
+- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/linux/**`
 - **Completude:** C-SBX-03.
 - **Sucesso:** a mesma política dá o mesmo resultado que no macOS.
 - **Invariantes:** detecção de suporte antes do spawn; se faltar algo, `SANDBOX_UNAVAILABLE`.
@@ -630,7 +659,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** corrigir backend.
 
 #### SB6 · Windows (spike S5 + backend)
-- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/windows.rs`, `docs/adr/0006-sandbox-windows.md`
+- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/windows/**`, `docs/adr/0006-sandbox-windows.md`
 - **Completude:** C-SBX-05.
 - **Sucesso:** o GUARANTEES mostra exatamente o que o Windows bloqueia, e cada linha tem teste.
 - **Invariantes:** o que não for garantido vira `SANDBOX_UNAVAILABLE`.
@@ -676,7 +705,8 @@ Ver `docs/acceptance.md`.
 ```text
 Cargo.toml  AGENTS.md  CLAUDE.md  GUARANTEES.md  PLAN.md
 conformance/{SPEC.md, FIXTURE.md, scenarios/*.json}
-crates/hugr-omni/{src/{lib,command,types,error,validate,resolve,env,exit,child,supervise,registry,run}.rs, src/{io,sys,pty,sandbox}/, tests/, examples/}
+crates/hugr-omni/src/{lib.rs, api/, error/, spawn/, process/, io/, pty/{session.rs,unix/,windows/}, sys/{unix/,windows/}, sandbox/}
+crates/hugr-omni/{tests/, examples/}
 crates/omni-fixture/
 bindings/node/{src/, lib/, index.d.ts, npm/, test/}
 bindings/python/{src/, python/hugr_omni/, tests/}
@@ -697,7 +727,7 @@ CARD    <o card inteiro do WP, verbatim: Completude, Sucesso, Invariantes, Quali
 ITENS   <id — promessa — cenário> (vermelho agora; faça ficar verde; testes são somente-leitura)
 ARMADILHAS nunca `git add -A`; stage por nome; `git diff --name-only <baseline>...HEAD` antes de cada push;
            dependência nova = pare e pergunte; não abra PR.
-GATES   cargo fmt --check · cargo clippy --all-targets -- -D warnings ·
+GATES   python3 scripts/file-size-guard.py · cargo fmt --check · cargo clippy --all-targets -- -D warnings ·
         cargo clippy --target x86_64-pc-windows-msvc -- -D warnings · cargo test -p hugr-omni <filtro> ·
         scripts/linux-docker cargo test -p hugr-omni <filtro> · <gates do card, ex.: qa/run --quick>
 PARE    em "branch wp/<id> empurrada, verde localmente, aguardando o lead". Você não integra nem abre PR.
@@ -729,7 +759,8 @@ FOR EACH CARD FIELD return pass|fail with concrete evidence (file:line or comman
   completude  — every owned item is implemented and its scenario genuinely exercises it
   sucesso     — the user-visible outcome the card promises is actually delivered
   invariantes — every card invariant and global INV holds, including on error paths
-  qualidade   — card quality bar + QS; flag over-engineering and tests without value
+  qualidade   — card quality bar + QS; flag over-engineering, tests without value, any code file > 600 lines
+                (P2: needs a split plan; > 650 is P0) and any import that points up the module layering
   dod         — every DoD bullet of the card is satisfied or demonstrably satisfiable
 Then list findings. SEVERITY: P0 wrong behavior/security/data loss/invariant broken/contract test edited;
 P1 vacuous scenario, flaky, UX or message regression, wrong docs; P2 clarity/over-engineering; P3 nit.
@@ -764,3 +795,4 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
+- 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).
