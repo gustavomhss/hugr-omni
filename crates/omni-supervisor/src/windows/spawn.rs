@@ -132,8 +132,12 @@ pub(super) fn spawn(
     let env = env_block(&s.env)?;
     let job = job::create().map_err(|e| os_failure("job", &e))?;
     watch(&job).map_err(|e| os_failure("job completion port", &e))?;
+    // A terminal root: the ConPTY path is laid out step by step in `pty_windows`; `create` below is its step 5.
     let pty = match s.pty {
-        Some((cols, rows)) => Some(pty_windows::create(cols, rows).map_err(|e| os_failure("terminal", &e))?),
+        Some((cols, rows)) => Some(pty_windows::create(cols, rows).map_err(|e| match e.kind() {
+            io::ErrorKind::InvalidInput => invalid(e.to_string()),
+            _ => os_failure("terminal", &e),
+        })?),
         None => None,
     };
     let pc = pty.as_ref().map(|(p, _)| p.handle());
