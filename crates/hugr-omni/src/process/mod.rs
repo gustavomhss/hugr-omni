@@ -6,7 +6,11 @@
 
 mod child;
 mod deadline;
+mod exit;
+mod life;
 mod run;
+#[cfg(test)]
+mod tests;
 
 use tokio_util::sync::CancellationToken;
 

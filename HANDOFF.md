@@ -68,7 +68,8 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 
 - `bundle/B3` (`bc08537`+): W12w, W02 e W10 entraram (Codex aprovou os três; probes do lead vermelhos; Windows CI
   verde nos 2 builds para o W12w; Linux Docker verde em `bc08537`).
-- W07: aprovado pelo Codex (r2). O agente está juntando a `bundle/B3` na `wp/W07` e adicionando o teste do
+- W07: ENTROU (`bundle/B3`), com o C-SCOPE-01 e o ledger atualizado; o resto desta linha é histórico. Antes:
+  aprovado pelo Codex (r2). O agente está juntando a `bundle/B3` na `wp/W07` e adicionando o teste do
   C-SCOPE-01 (drop pela API pública, inclusive após o runtime do chamador fechar). Commit só local, na worktree
   `.claude/worktrees/agent-aee3e7db1154947a3`. Para entrar: push da `wp/W07`; contrato no macOS; probe do lead
   (esvaziar `Child::drop` → C-SCOPE-01 vermelho); squash; tirar do `conformance/pending.txt`: C-IO-02, C-IO-03,
