@@ -50,6 +50,9 @@ jobs:
       - name: TypeScript surface and quickstart type-check
         working-directory: bindings/node
         run: npx -y -p typescript@5 tsc -p tsconfig.json
+      - name: TS runner and idiom tests type-check
+        working-directory: bindings/node
+        run: npx -y -p typescript@5 tsc -p test/tsconfig.json
 
   test:
     needs: checks
@@ -67,6 +70,11 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: cargo build --workspace --bins
       - run: cargo test --workspace --no-fail-fast
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: TS runner teeth (contract.mjs and idioms.mjs join CI with the binding, W13)
+        run: node bindings/node/test/teeth.mjs
       - name: K4 spawn round trip, release build (Linux is the K4 reference)
         if: runner.os == 'Linux'
         run: |
