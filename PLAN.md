@@ -770,6 +770,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - **registro de pendências** `conformance/pending.txt`: um item pendente que falha conta como `pending`, e um que passa falha o CI até sair do registro. Só o lead edita, e ele tem que estar vazio no release;
   - o `unsafe` do fixture fica restrito a `omni-fixture/src/sys`;
   - as 4 ambiguidades do SPEC que o primeiro runner resolveu viraram regra no SPEC.
+- 2026-10-02 · Lead, revisão do W01 (emenda do card): o "runner Rust com ≤ ~300 linhas" era estimativa. O DSL de 10 ações, mais o oráculo do OS, o registro de pendências e a guarda de regex, precisa de ~1250 linhas em 8 arquivos, cada um abaixo de 300. Aceito, sem crescer além dos consertos da revisão.
 - 2026-10-02 · Lead, rodada 2 do W05:
   - "revezamento" adversário (fork e saída mais rápidos que a varredura, sempre no intervalo exato) fica como limitação declarada no GUARANTEES, sem código novo. Não dá capacidade nova a um adversário, que já escapa mais fácil com `setsid` (declarado). O modelo de ameaça do exec é programa comum ou com bug; conter código hostil é o trabalho da sandbox;
   - o P1 de `unwrap` em teste unitário era falso positivo: o `clippy.toml` permite `unwrap` em `#[test]`, e o clippy do lead passou;
