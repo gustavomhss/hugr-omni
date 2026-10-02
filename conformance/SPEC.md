@@ -86,6 +86,8 @@ Settled while writing the first runner; every runner follows them:
 - **Exit / RunResult:** `exitCode`, `signal`, `reason`, `success`, `stdout`, `stderr`.
 - **`read`:** `stdout`, `stderr`, `pty` (everything this step read from that stream, joined), `chunks` (count),
   `lostBefore` (sum seen), `droppedBytes` (`{ "stdout": …, "stderr": … }`), `continues` (count of pieces marked).
+  In lines mode only, `pieces`: `{ "stdout" | "stderr" | "pty": [{ "bytes": n, "continues": bool }, …] }`, the exact
+  byte length and flag of every line item read, in order.
 - **`processes`:** `entries`, an unordered list that must match the result one to one:
   `{ "pid": …, "parentPid": … | null, "name": matcher }`. `pid` and `parentPid` accept a number or a capture (which
   matches any of its values).
