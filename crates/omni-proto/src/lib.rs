@@ -20,7 +20,8 @@ pub const INFO_PIDFD_MEMBERS: u32 = 2;
 /// What a child gets on stdin or stderr (stdout is always a pipe).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Slot {
-    /// stdin only: end of input at once (Unix `/dev/null`; Windows a null handle).
+    /// stdin only: end of input at once (the null device, opened for reading by the supervisor: Unix
+    /// `/dev/null`, Windows `NUL`).
     Null,
     /// A pipe end sent with the frame (Unix SCM_RIGHTS; Windows a handle value in `Spawn::handles`).
     Pipe,
@@ -82,8 +83,6 @@ pub enum FailCode {
 pub enum Ack {
     /// Done.
     Ok,
-    /// The tree is already confirmed gone; nothing was sent to any process.
-    Gone,
     /// Unknown or released tree id.
     Unknown,
     /// The operation failed (e.g. an incomplete process inventory).

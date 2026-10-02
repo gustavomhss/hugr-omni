@@ -39,9 +39,10 @@ it sends `Ready`. The host refuses another `version`, and a forked copy of the h
 | 0x84 | `Exited` | id u64 · kind u8 (0 code, 1 signal) · value u32 |
 | 0x85 | `Stopped` | req u64 · id u64 |
 | 0x86 | `Processes` | req u64 · id u64 · list<(pid u32 · ppid u32, 0 = parent not in list · name bytes)> |
-| 0x87 | `Ack` | req u64 · id u64 · result u8 (0 ok, 1 gone, 2 unknown, 3 error, 4 closed) |
+| 0x87 | `Ack` | req u64 · id u64 · result u8 (0 ok, 2 unknown, 3 error, 4 closed; 1 is reserved) |
 
-stdout is always a pipe.
+stdout is always a pipe. A `null` stdin is the null device opened for reading by the supervisor (`/dev/null`,
+`NUL`), so the child reads end of input at once.
 
 **Replies.** Every request gets exactly one reply carrying its `req`, even when host threads overlap. An unknown or
 released `id` gets `Ack unknown` for every request.
@@ -65,11 +66,6 @@ released `id` gets `Ack unknown` for every request.
 - **Windows:** the host `DuplicateHandle`s its pipe ends into the supervisor and lists them in `handles`. PTY ends
   come back as values in `pty_ends`, which the host pulls out with `DUPLICATE_CLOSE_SOURCE`.
 
-**Trees.**
-- **Kill unit and stop:** the session on Unix, the Job on Windows. `Stop` signals gracefully and forces at the
-  deadline (ADR-0005 §3). A root stays unreaped until its session is empty, and a gone tree is never signalled
-  again.
-- **`List`:** the members `Stop` would reach at the time of the scan, without the zombie root; `ppid` is set only
-  when the parent is in the list.
-- **Host death:** every tree gets a `Stop` with its own `grace_ms`; the supervisor exits when all are gone.
-- **Supervisor death:** every pending host call of that generation fails with `IO`.
+**Trees** follow ADR-0005 §3–§8 (session or Job as the kill unit, pinning, host and supervisor death). `List`
+returns the members `Stop` would reach at the time of the scan, without the zombie root, with `ppid` set only when
+the parent is listed. On host death every tree gets a `Stop` with its own `grace_ms`.

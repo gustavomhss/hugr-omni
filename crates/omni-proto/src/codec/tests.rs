@@ -91,7 +91,7 @@ fn all() -> Vec<Msg> {
         Msg::Ack {
             req: 1,
             id: 2,
-            result: Ack::Gone,
+            result: Ack::Closed,
         },
     ]
 }

@@ -199,7 +199,6 @@ pub fn decode(buf: &[u8]) -> Result<Option<(Msg, usize)>, ProtoError> {
             id: r.u64()?,
             result: match r.u8()? {
                 0 => Ack::Ok,
-                1 => Ack::Gone,
                 2 => Ack::Unknown,
                 3 => Ack::Error,
                 4 => Ack::Closed,
@@ -280,7 +279,6 @@ fn fail_code(c: FailCode) -> u8 {
 fn ack(a: Ack) -> u8 {
     match a {
         Ack::Ok => 0,
-        Ack::Gone => 1,
         Ack::Unknown => 2,
         Ack::Error => 3,
         Ack::Closed => 4,

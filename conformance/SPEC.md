@@ -7,20 +7,21 @@ C-HOST-01) are written per language beside the runner, not here.
 
 ```json
 {
-  "id": "C-KILL-01.after-wait",
-  "os": ["linux", "macos", "windows"],
-  "files": { "bin/tool.cmd": "@echo off\r\n\"${FIXTURE}\" argv %*\r\n" },
+  "id": "C-PROC-01.tree",
   "steps": [
-    { "spawn": ["${FIXTURE}", "tree=2", "exit=0"], "as": "c" },
-    { "read": "c", "until": { "match": "PID 2 ", "count": 1 }, "capture": { "pids": "PID \\d (\\d+)" } },
+    { "spawn": ["${FIXTURE}", "tree=2", "read-line", "exit=0"], "options": { "stdin": "pipe" }, "as": "c" },
+    { "read": "c", "until": { "match": "PID 2 ", "count": 1 },
+      "capture": { "p1": "PID 1 (\\d+)", "p2": "PID 2 (\\d+)" } },
     { "processes": "c", "expect": { "entries": [
         { "pid": "${c.pid}", "parentPid": null, "name": { "regex": "^omni-fixture" } },
-        { "pid": "${pids}", "parentPid": "${c.pid}", "name": { "regex": "^omni-fixture" } },
-        { "pid": "${pids}", "parentPid": "${pids}", "name": { "regex": "^omni-fixture" } } ] } },
+        { "pid": "${p1}", "parentPid": "${c.pid}", "name": { "regex": "^omni-fixture" } },
+        { "pid": "${p2}", "parentPid": "${p1}", "name": { "regex": "^omni-fixture" } } ] } },
+    { "write": "c", "data": "go\n" },
     { "wait": "c", "expect": { "reason": "exit", "exitCode": 0 } },
-    { "os": "alive", "pids": "${pids}" },
+    { "os": "alive", "pids": ["${p1}", "${p2}"] },
     { "stop": "c", "graceMs": 1000, "expect": { "reason": "exit", "elapsedMs": { "lt": 1500 } } },
-    { "os": "dead", "pids": "${pids}", "withinMs": 500 }
+    { "processes": "c", "expect": { "entries": [] } },
+    { "os": "dead", "pids": ["${p1}", "${p2}"], "withinMs": 500 }
   ]
 }
 ```
@@ -54,7 +55,7 @@ failure, never a pass.
 | `abort` | aborts the `AbortSignal` that every `run`/`spawn` of the runner gets | – |
 | `resize` | `resize(cols, rows)` | `cols`, `rows`, `expect` |
 | `processes` | `processes()` | `capture` (the pids), `expect` |
-| `os` | asks the OS (never the library) that every pid in `pids` is `alive` or `dead` (gone or a zombie) | `pids`, `withinMs` (poll until true or fail) |
+| `os` | asks the OS (never the library) that every pid in `pids` is `alive` or `dead` (gone or a zombie) | `pids` (a capture or a list), `withinMs` (poll until true or fail) |
 
 `options` uses the TS names of `docs/api-contract.md` (`cwd`, `env`, `inheritEnv`, `timeoutMs`, `graceMs`, `text`,
 `mergeStderr`, `input`, `maxOutputBytes`, `stdin`, `pty`); each runner maps them to its language.

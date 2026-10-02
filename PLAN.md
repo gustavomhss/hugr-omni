@@ -444,7 +444,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Invariantes:** ADR-0005 R1, R3, R4, R5, R8, R10; o supervisor tem uma thread só; toda syscall é checada.
 - **Qualidade:** `// SAFETY:` em todo `unsafe`; stop-all com um inventário e um prazo compartilhados.
 - **DoD:** suíte verde nos 3 alvos Unix do CI; o Codex revisa identidade de processos e corridas; o lead faz mutation probe trocando "sessão" por "grupo".
-- **Não fazer:** PTY (é do W12); I/O de saída (fica no host).
+- **Não fazer:** abrir e configurar o terminal (`pty_unix`, que é do W12; o fork, o hold até o `Go` e o exec da raiz PTY são deste WP); I/O de saída (fica no host).
 
 #### W06 · Supervisor Windows
 - **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/windows/**`, `crates/omni-supervisor/tests/windows*.rs`
@@ -454,7 +454,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Invariantes:** ADR-0005 R1, R5, R7; nunca usar breakaway; handles fechados em todos os caminhos.
 - **Qualidade:** o quoting cita o commit do std de onde foi portado, e o diferencial roda no CI.
 - **DoD:** suíte verde no `windows.yml`; o Codex tenta achar uma entrada que vire comando.
-- **Não fazer:** ConPTY (é do W12w).
+- **Não fazer:** criar e fechar o ConPTY (`pty_windows`, que é do W12w; o `CreateProcessW` com o atributo `PSEUDOCONSOLE` é deste WP).
 
 #### W07 · Child: kill de árvore e saída
 - **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{mod,child,exit}.rs`
@@ -775,9 +775,10 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - GUARANTEES: `setpgid` não sai da sessão (só `setsid`);
   - CI: o gate do musl não passa mais quando a inspeção falha; `converted_to_draft` cancela a run em andamento;
   - `index.js` stub carregável, para o runner TS falhar pelo motivo certo;
-  - o item de DoD do relay hook (`move-in`) saiu: o `AGENTS.md` já é a memória do repo;
+  - **emenda do card W00 pelo lead:** saiu o item de DoD "`move-in` confere o relay hook". O relay (`RELAY-ARM`, Apêndice C) é opcional e não está ligado neste repo, e o `move-in` só gera um mapa em `.techlead/`, que duplicaria o `AGENTS.md`. Não há o que conferir;
   - ficaram de propósito os arquivos de 1 linha `process/deadline.rs` e `error/messages.rs`: evitam que o W09 e o W03 editem um `mod.rs` de outro dono.
   - hash do contrato congelado (sha256, 16 primeiros): `86907cb5b71d790a`.
+  - rodada 2 do Codex: o exemplo do SPEC segura a raiz com `read-line` até o inventário e confere cada elo pai→filho; o slot `null` é o dispositivo nulo aberto para leitura (no Windows `NUL`, nunca um handle nulo); `Ack::Gone` removido (valor 1 reservado); a seção de árvores do protocolo remete ao ADR. `Data` mantém `Display` por ergonomia; os stubs privados do `spawn` ficam com o W03, que é o dono;
   - o **codec** do protocolo saiu do W04 e foi feito no W00: W04, W05 e W06 precisam dele em paralelo, e ele é o contrato byte a byte (4 testes com probe de motivo: ida e volta de cada mensagem, frames parciais, 10 frames malformados, `encode` recusa o que o `decode` recusaria); `client::runtime()` entrou no seam (o runtime tokio próprio do ADR-0004 tem um dono só); os testes do supervisor ficam em `crates/omni-supervisor/tests/` (W05: `unix*`, `common/`; W06: `windows*`).
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
