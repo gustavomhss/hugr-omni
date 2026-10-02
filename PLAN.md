@@ -87,21 +87,25 @@ Resumo do que ficou decidido:
 
 ### Arquitetura interna (monolito modular)
 
-Uma crate (`hugr-omni`), um módulo por responsabilidade, cada módulo com um `mod.rs` que é a sua fachada (o seam congelado no W00) e arquivos pequenos atrás dela:
+Um workspace, poucas crates, um módulo por responsabilidade. Cada módulo tem um `mod.rs` que é a sua fachada (o seam congelado no W00) e arquivos pequenos atrás dela. O processo supervisor está no ADR-0005.
 
-| Módulo | Responsabilidade | Pode depender de | Dono |
+| Crate / módulo | Responsabilidade | Pode depender de | Dono |
 |---|---|---|---|
-| `api/` | superfície pública: `Command`, `Child`, `run`, tipos (`Exit`, `Chunk`, ...) | `process`, `io`, `spawn`, `pty`, `error` | W00 (congelado) |
-| `process/` | ciclo de vida: árvore e kill (`tree`), `Exit` (`exit`), timeout/cancelamento (`supervise`), limpeza na saída do host (`registry`) | `spawn`, `io`, `pty`, `sys`, `error` | W07, W09 |
-| `spawn/` | do pedido ao comando pronto: `resolve`, `env`, `validate` | `sys`, `error` | W03 |
-| `io/` | saída (`out`, `decode`), stdin (`stdin`), coleta do `run` (`collect`) | `error` | W10 |
-| `pty/` | sessão PTY (`session`) + backends `unix/` e `windows/` | `sys`, `io`, `error` | W12, W12w |
-| `sys/` | primitivas do OS: `unix/` (grupo, sinais, wait) e `windows/` (Job, linha de comando, spawn) | `error` | W05, W06 |
-| `error/` | `Error` + códigos (`mod.rs`, congelado) e textos (`messages`) | — | W00, W03 |
-| `sandbox/` (Fase 2) | `policy` + backends `macos`, `linux/`, `windows/` | `sys`, `error` | SB1–SB6 |
+| `hugr-omni` · `api/` | superfície pública (`docs/api-contract.md`) | `process`, `io`, `spawn`, `pty`, `error` | W00 (congelado) |
+| `hugr-omni` · `process/` | estado do `Child`: `stop`, `wait`, `Exit` e precedência de `reason`, timeout e cancelamento, `run` | `client`, `io`, `spawn`, `pty`, `error` | W07, W09 |
+| `hugr-omni` · `spawn/` | do pedido ao `Spawn`: `resolve` (PATH final + PATHEXT), `env`, `validate` | `error` | W03 |
+| `hugr-omni` · `io/` | bombas de saída com buffer limitado, decodificação, `lines`, stdin, coleta do `run` | `error` | W10 |
+| `hugr-omni` · `pty/` | lado host do PTY: leitura, `Go`, `resize` | `client`, `io`, `error` | W12 |
+| `hugr-omni` · `client/` | ciclo de vida do supervisor (início lazy, geração, reinício, checagem de pid criador), canal não bloqueante | `omni-proto`, `error` | W04 |
+| `hugr-omni` · `error/` | `OmniError` e códigos (`mod.rs`, congelado) + textos (`messages`) | — | W00, W03 |
+| `omni-proto` | frames e mensagens host↔supervisor (`docs/protocol.md`) | — | W00 (tipos), W04 (codec) |
+| `omni-supervisor` · `unix/` | loop de eventos, `posix_spawn`, sessões, inventário, pidfd/kqueue, colheita e pin, `Stop`, morte do host | `omni-proto` | W05 |
+| `omni-supervisor` · `windows/` | `CreateProcessW` + `JOB_LIST`, quoting do std, Jobs, CTRL_BREAK do próprio console, morte do host | `omni-proto` | W06 |
+| `omni-supervisor` · `pty_unix/`, `pty_windows/` | PTY no supervisor (fork + `TIOCSCTTY` + `Go`; ConPTY + worker de fechamento com prazo) | `unix/` ou `windows/` | W12, W12w |
+| `omni-fixture` | programa de teste | — | W01 |
 
 Regras:
-- As dependências só apontam para baixo na tabela. `sys/` e os backends de `pty/` nunca importam `api`, `process` ou `spawn`.
+- As dependências só apontam para baixo na tabela. O supervisor nunca depende de `hugr-omni`; os dois só compartilham `omni-proto`.
 - `lib.rs` só reexporta `api` e `error`; o resto é `pub(crate)`.
 - Os bindings são crates separadas e só enxergam a API pública (o compilador garante). Dentro de cada binding a divisão é por responsabilidade: `child`, `run`, `error`, `convert`.
 - Um arquivo que encosta em 600 linhas é dividido dentro do mesmo módulo antes de virar problema.
@@ -250,7 +254,7 @@ Windows em runtime e os alvos arm64 são provados no CI do bundle. Uma falha lá
 ```text
 Fase 0   R1 · R2 · S1 · S2 · S3   (+ H0)          → WG0 gate (Owner assina)   [B0]
 Fase 1   W00 (lead) → W01 · W02                                               [B1]
-         → W03 · W05 · W06 · W10 → W07 → W09                                  [B2]
+         → W03 · W04 · W05 · W06 · W10 → W07 → W09                            [B2]
          → W12 · W12w                                                         [B3]
          → W13 · W14   (W15 Python e publicação Rust no v0.2)                 [B4]
          → W18 · Q1 → Q2 → correções                                          [B5]
@@ -374,18 +378,20 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 ### Fase 1: v0.1 (`exec` + `pty`, 3 linguagens)
 
 #### W00 · Scaffold + contrato congelado (lead, não delegado)
-- **Quem:** lead · **Depende:** G0 e D5 · **Escreve:**
+- **Quem:** lead · **Depende:** G0, D5, ADR-0005 · **Escreve:**
   - `Cargo.toml` (`members = ["crates/*", "bindings/*"]`), `rust-toolchain.toml`;
   - `AGENTS.md` e `CLAUDE.md`;
-  - `GUARANTEES.md`, `docs/glossary.md`, `conformance/SPEC.md`, `conformance/FIXTURE.md`;
-  - `crates/hugr-omni/src/{lib.rs, api/**, error/mod.rs}` (API pública documentada, corpos stub) e a fachada `mod.rs` de cada módulo (`spawn`, `process`, `io`, `pty`, `sys`): os seams congelados;
-  - `bindings/node/{index.d.ts,package.json}`, `bindings/python/{pyproject.toml,python/hugr_omni/*.pyi}`;
-  - `.github/workflows/{core,windows}.yml`, `.github/review/schema.json`.
-- **Completude:** SCF-01 (compila nos 3 OS; os stubs retornam erro, nunca panic; `file-size-guard` e seus testes de dentes registrados no `core.yml`).
+  - `GUARANTEES.md`, `docs/protocol.md`, `conformance/SPEC.md`, `conformance/FIXTURE.md`;
+  - `crates/hugr-omni/src/{lib.rs, api/**, error/mod.rs}` (API pública documentada, corpos stub) e a fachada `mod.rs` de `spawn`, `process`, `io`, `pty` e `client`;
+  - `crates/omni-proto/**` (tipos das mensagens congelados; o codec fica como stub);
+  - `crates/omni-supervisor/src/main.rs` + as fachadas `mod.rs` de `unix`, `windows`, `pty_unix` e `pty_windows`;
+  - `bindings/node/{index.d.ts,package.json}`;
+  - `.github/workflows/{core,windows}.yml` (com build musl estático do supervisor), `.github/review/schema.json`.
+- **Completude:** SCF-01 (compila nos 3 OS e no musl; os stubs retornam erro, nunca panic; `file-size-guard` e seus testes de dentes rodando no `core.yml`).
 - **Sucesso:** qualquer WP pode ser despachado sem nenhuma pergunta de interface.
-- **Invariantes:** contrato mínimo; DSL de cenários com ≤10 passos; hash do contrato registrado.
+- **Invariantes:** contrato mínimo; DSL de cenários com ≤10 passos; protocolo com ≤1 página; hash do contrato registrado.
 - **Qualidade:** doc pública escrita primeiro (README-driven); os quickstarts compilam.
-- **DoD:** o Codex pergunta "isto é o mínimo? algum nome confunde?"; `move-in` confere o relay hook.
+- **DoD:** o Codex pergunta "isto é o mínimo? algum nome confunde?" sobre a API, o protocolo e os seams; `move-in` confere o relay hook.
 - **Não fazer:** implementar comportamento.
 
 #### W01 · Fixture + contrato (cenários + runner Rust)
@@ -419,26 +425,38 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** mutation probe do lead removendo o PATHEXT.
 - **Não fazer:** cache de resolução; expansão de variáveis.
 
-#### W05 · `sys/unix`
-- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/sys/unix/**`
-- **Completude:** SYS-U.
-- **Sucesso:** o W07 mata árvores no Linux e no macOS sem nenhum `cfg` fora deste arquivo.
-- **Invariantes:** toda syscall checada; nunca sinalizar um grupo já colhido; `CLOEXEC` em tudo.
-- **Qualidade:** `// SAFETY:` em todo `unsafe`.
-- **DoD:** verde no macOS nativo e no Linux via Docker.
-- **Não fazer:** graça, timeout, PTY.
+#### W04 · Canal e cliente do supervisor (lado host)
+- **Agente:** Opus · **Depende:** W00 · **Escreve:** `crates/omni-proto/src/codec/**`, `crates/hugr-omni/src/client/**`
+- **Objetivo:** o host fala com o supervisor de forma segura sob concorrência, falha e reinício.
+- **Completude:** PROTO-01 (suíte do canal: frames parciais, enxurrada de pedidos, par travado, vários waiters de `Stop`, reinício por geração, cliente herdado por fork recusado, bootstrap do Windows sem handle herdável).
+- **Sucesso:** matar o supervisor no meio de 10 operações concorrentes faz todas falharem com `IO`, e o próximo spawn funciona.
+- **Invariantes:** ADR-0005 R1, R2, R6, R7; o host nunca bloqueia a thread do runtime esperando o supervisor.
+- **Qualidade:** a ida e volta de um spawn ≤ 0,2 ms no Linux (meta do K4); o codec é uma função pura testada à parte.
+- **DoD:** o Codex revisa a linearização e o bootstrap; o lead mata o supervisor durante um flood e confere.
+- **Não fazer:** lógica de processo (isso fica no supervisor e no `process/`).
 
-#### W06 · `sys/windows`
-- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/sys/windows/**`
-- **Completude:** SYS-W, C-SPAWN-02.
-- **Sucesso:** argumentos chegam idênticos; `.bat` nunca vira injeção; o filho nasce dentro do Job.
-- **Invariantes:** sem janela de corrida na criação; quoting recusa o que não é representável; handles fechados em todos os caminhos.
-- **Qualidade:** o algoritmo de quoting cita a fonte e tem testes de tabela.
-- **DoD:** verde no `windows.yml` sob demanda; o Codex tenta achar uma entrada que vire comando.
-- **Não fazer:** ConPTY.
+#### W05 · Supervisor Unix
+- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/unix/**`
+- **Objetivo:** criar, conter, parar e colher processos no Linux e no macOS, sem nunca atingir um processo errado.
+- **Completude:** SUP-U (suíte do supervisor no Linux, macOS e Linux musl: spawn por `posix_spawn` com `SETSID` e só os fds de stdio; `Stop` com prazo único sobre a sessão; pin até a sessão esvaziar; inventário que distingue incompleto de vazio; fallback sem pidfd; morte do host de 7 formas, inclusive no meio do spawn; sentinela de reuso de PID; `Release` com descendentes resistentes em outros grupos, mais um controle só-grupo).
+- **Sucesso:** `stop()` nunca deixa sobrevivente na sessão e nunca toca em processo alheio.
+- **Invariantes:** ADR-0005 R1, R3, R4, R5, R8, R10; o supervisor tem uma thread só; toda syscall é checada.
+- **Qualidade:** `// SAFETY:` em todo `unsafe`; stop-all com um inventário e um prazo compartilhados.
+- **DoD:** suíte verde nos 3 alvos Unix do CI; o Codex revisa identidade de processos e corridas; o lead faz mutation probe trocando "sessão" por "grupo".
+- **Não fazer:** PTY (é do W12); I/O de saída (fica no host).
+
+#### W06 · Supervisor Windows
+- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/windows/**`
+- **Objetivo:** o filho nasce dentro do Job, a linha de comando é segura, e o Ctrl-Break sai do console do supervisor, nunca do host.
+- **Completude:** SUP-W (suíte do supervisor no Windows 11 e no Server 2022: `CreateProcessW` + `JOB_LIST`; quoting igual ao do std, com testes diferenciais contra o `std::process`; `.cmd`/`.bat` seguros ou recusados; CTRL_BREAK gracioso e forçado via Job; morte do host; supervisor morto mata as árvores), C-SPAWN-02.
+- **Sucesso:** argumentos chegam idênticos, `.bat` nunca vira injeção, e o estado de console do host não muda.
+- **Invariantes:** ADR-0005 R1, R5, R7; nunca usar breakaway; handles fechados em todos os caminhos.
+- **Qualidade:** o quoting cita o commit do std de onde foi portado, e o diferencial roda no CI.
+- **DoD:** suíte verde no `windows.yml`; o Codex tenta achar uma entrada que vire comando.
+- **Não fazer:** ConPTY (é do W12w).
 
 #### W07 · Child: kill de árvore e saída
-- **Agente:** Opus · **Depende:** W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{tree,exit}.rs`
+- **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{child,exit}.rs`
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-SCOPE-01.
 - **Sucesso:** depois de `stop()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
 - **Invariantes:** `kill` idempotente; `drop` não bloqueia; `wait` tem uma fonte única de verdade; `Exit` vem de uma função pura.
@@ -447,13 +465,13 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** timeout e cancelamento.
 
 #### W09 · Supervisão: timeout, cancelamento, host
-- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/process/{supervise,registry}.rs`
+- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/process/{deadline,run}.rs`
 - **Completude:** C-TMO-01, C-TMO-02, C-HOST-01 (host Rust), C-RS-01, C-RS-02 (todos os cenários via API Rust; a prova nos 5 alvos vem no CI completo do B2).
 - **Sucesso:** timeout e cancelamento nunca deixam nada para trás; o host sair limpa tudo, no tier declarado.
-- **Invariantes:** cada waiter resolve exatamente uma vez; o registry tem só `register`/`unregister`/`kill_all`; nada bloqueia o executor.
+- **Invariantes:** cada waiter resolve exatamente uma vez; a limpeza na morte do host é do supervisor (ADR-0005), não do host; nada bloqueia o executor.
 - **Qualidade:** uma máquina de estados explícita, sem flags espalhadas.
 - **DoD:** QA-E local (200 comandos com cancelamentos) com K1 = K2 = 0; o Codex revisa corridas.
-- **Não fazer:** tratar sinais do host além do que o ADR-0002 decidir.
+- **Não fazer:** instalar handler de sinal ou hook de saída no host (ADR-0005 §9).
 
 #### W10 · IO + `run()`
 - **Agente:** Opus · **Depende:** W01 (o `run` integra com W07) · **Escreve:** `crates/hugr-omni/src/io/{out,decode,stdin,collect}.rs`
@@ -469,22 +487,23 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** QA-D local (flood, stdin, pipe herdado) com K2 = K5 = 0.
 - **Não fazer:** parsing de linhas; strip de ANSI.
 
-#### W12 · PTY: Unix + integração
-- **Agente:** Opus · **Depende:** W05, W07, W10, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/session.rs`, `crates/hugr-omni/src/pty/unix/**`
+#### W12 · PTY no Unix + lado host
+- **Agente:** Opus · **Depende:** W04, W05, W10, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_unix/**`, `crates/hugr-omni/src/pty/**`
+- **Objetivo:** terminal interativo no Linux e no macOS, sem perder saída e sem travar.
 - **Completude:** PTYSYS-U, C-PTY-01, C-PTY-02, C-PTY-03, C-PTY-04.
-- **Sucesso:** bash/python interativo, resize, Ctrl-C e saída sem perda, igual em 3 OS (com o W12w).
-- **Invariantes:** o PTY usa o mesmo modelo de grupo/Job e o mesmo `io`; falha de setup não vaza nada.
-- **Qualidade:** `session.rs` sem `cfg`, com ≤ ~200 linhas.
-- **DoD:** QA-C local (bash, python, node) com K2 = 0.
+- **Sucesso:** um agente roda `bash` ou `python` interativo, redimensiona, manda Ctrl-C e encerra; um programa que imprime e sai na hora entrega 300/300 saídas no macOS.
+- **Invariantes:** `/dev/ptmx` com `O_CLOEXEC`; `ptsname_r` / `TIOCPTYGNAME` (nunca `ptsname`); `Go` só depois que o leitor do host está rodando (ADR-0005 R9); a sessão é a unidade de kill.
+- **Qualidade:** a comparação de saída usa o texto exato do fixture; o normalizador de VT só entra em fixtures de texto simples.
+- **DoD:** a suíte no Linux e no macOS; o lead faz mutation probe removendo o `Go` e vê o controle perder saída.
 - **Não fazer:** emulador de terminal.
 
-#### W12w · ConPTY
-- **Agente:** Opus · **Depende:** W06, ADR-0003 · **Escreve:** `crates/hugr-omni/src/pty/windows/**`
+#### W12w · ConPTY no supervisor
+- **Agente:** Opus · **Depende:** W06, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_windows/**`
 - **Completude:** PTYSYS-W.
-- **Sucesso:** o travamento clássico do ConPTY (o filho sai e a leitura nunca termina) não acontece em 200 execuções.
-- **Invariantes:** o filho nasce no Job; o fechamento segue a ordem do ADR-0003.
-- **Qualidade:** o caminho do ConPTY documentado passo a passo no código.
-- **DoD:** 200 execuções verdes no `windows.yml`; o Codex revisa a ordem de fechamento de handles.
+- **Sucesso:** um escritor teimoso com `graceMs` = 1000 termina dentro do prazo no Windows 11 e no Server 2022, e o host nunca muda o estado de console.
+- **Invariantes:** flags 0, ponta do PTY fechada, handles padrão nulos explícitos; `ClosePseudoConsole` num worker com prazo independente; o filho nasce no Job.
+- **Qualidade:** o caminho do ConPTY documentado passo a passo no código; o vazamento de handle em builds < 26100 medido e declarado no GUARANTEES.
+- **DoD:** 200 execuções verdes no `windows.yml` nos dois builds; o Codex revisa a ordem de fechamento.
 - **Não fazer:** Unix.
 
 #### W13 · Binding Node/Bun/Deno
@@ -507,7 +526,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 #### W14 · Empacotamento (npm, PyPI, crates.io)
 - **Agente:** Sonnet · **Depende:** W00, ADR-0004 · **Escreve:** `bindings/node/{package.json,npm/**}`, `bindings/python/pyproject.toml`, `crates/hugr-omni/examples/**`, `.github/workflows/pkg.yml`
-- **Completude:** C-PKG-01 — no v0.1, só npm (Node/Bun/Deno); PyPI e crates.io entram no v0.2.
+- **Completude:** C-PKG-01 — no v0.1, só npm (Node/Bun/Deno), e cada pacote de plataforma leva o `hugr-omni-supervisor` (musl estático no Linux); PyPI e crates.io entram no v0.2.
 - **Sucesso:** K9 = 100%: instalação limpa nos 5 alvos × npm/bun/deno (v0.1), hello em < 30 s. Snippets prontos no ADR-0004.
 - **Invariantes:** nenhum `postinstall` que compile ou baixe; nenhuma sdist que compile de surpresa.
 - **Qualidade:** mensagem clara para plataforma não suportada; metadados completos nos 3 registries.
@@ -623,10 +642,10 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | Codex | concluído | `docs/research/processkit-audit.md` | "build on it with fixes" |
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
+| S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
+| W00 | **em andamento (lead)** | `bundle/B1` | scaffold + seams congelados (API, protocolo, supervisor) |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
-| S5 | despachado | `spike/supervisor` | valida o supervisor (ADR-0005) |
-| W00 | aguardando | — | depende do S5 (seam `sys`/supervisor); W05/W06/W12/W12w serão refatiados depois do S5 |
 ---
 
 ## 9. Riscos
@@ -651,8 +670,8 @@ Ver `docs/acceptance.md`.
 ```text
 Cargo.toml  AGENTS.md  CLAUDE.md  GUARANTEES.md  PLAN.md
 conformance/{SPEC.md, FIXTURE.md, scenarios/*.json}
-crates/hugr-omni/src/{lib.rs, api/, error/, spawn/, process/, io/, pty/{session.rs,unix/,windows/}, sys/{unix/,windows/}, sandbox/}
-crates/hugr-omni/{tests/, examples/}
+crates/hugr-omni/src/{lib.rs, api/, error/, spawn/, process/, io/, pty/, client/}   crates/hugr-omni/{tests/, examples/}
+crates/omni-proto/   crates/omni-supervisor/src/{main.rs, unix/, windows/, pty_unix/, pty_windows/}
 crates/omni-fixture/
 bindings/node/{src/, lib/, index.d.ts, npm/, test/}
 bindings/python/{src/, python/hugr_omni/, tests/}
@@ -743,6 +762,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
 - 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
 - 2026-10-01 · **G0 assinado: opção B.** A evidência medida (fit: 1 de 24 itens como está; perda silenciosa de saída; travamento sob Node/Bun no Linux sem pidfd; churn alto) mostrou que construir em cima do processkit nos faria reescrever I/O, timers, motivos, saída do host e o wait, mantendo uma dependência de 86 mil linhas. O processkit fica como **referência** (MIT): reaproveitamos técnicas (filho suspenso → Job → resume; cgroup v2 quando delegado), sem dependência de código. Linguagens: TS no v0.1; Python e Rust no v0.2. S1/S2 retomam assim que o billing do Actions for destravado (precisam de Windows).
+- 2026-10-02 · Lead: **ADR-0005 aceito** depois do S5 (asserções verdes nos 4 alvos) e da revisão do Codex (*accept_with_changes*). Refinamentos incorporados: `posix_spawn` + SETSID para filhos com pipe e fork só para a raiz do PTY; supervisor Linux em musl estático; a sessão é a unidade de kill; o pin dura até a sessão esvaziar (nunca acaba no `Release`); `Stop`/`Stopped` com prazo único e todos os waiters respondidos; `Go` só com o leitor rodando. Os requisitos R1–R10 entraram nos cards W04/W05/W06/W12/W12w. Núcleo refatiado: W04 (canal/cliente), W05 (supervisor Unix), W06 (supervisor Windows), W12 (PTY Unix + host), W12w (ConPTY no supervisor).
 - 2026-10-02 · Stakeholder autorizou: **K4 = ≤ 1,25× o stdlib ou ≤ +0,3 ms, o que for mais folgado.** O S5 mediu uma ida e volta fixa de ~0,17 ms do supervisor; com spawn de ~0,7 ms no Linux, a razão fica em 1,22–1,36×. macOS (1,10–1,14×) e Windows (1,11–1,16×) passam. A otimização da ida e volta continua no W04.
 - 2026-10-02 · Lead: as revisões do Codex rejeitaram os ADRs 0001–0003 como base de produto, pela mesma causa raiz: trabalho de ciclo de vida dentro do host. Ficam proibidos fork no host, mudança de estado de console ou de sinais do host, e zumbis "pinados" que um host com reaper agressivo destrói. **Decisão (ADR-0005):** um supervisor (binário próprio, iniciado por exec, uma vez por host) cria e colhe todos os filhos; o I/O continua no host via fds/handles passados. A validação é o spike S5. Os testes de spike e de produto precisam **afirmar** o resultado (print não é aceite).
 - 2026-10-02 · Stakeholder: "quem aprova é você" → o lead aprova as decisões técnicas (D12). Contrato da API revisado pelo Codex em 3 rodadas (rework → rework → freeze_after_fixes); as decisões estão em `docs/api-contract.md`: `stop()` no lugar de `kill()`, stdin fechado por padrão, saída sempre drenada com perda avisada em ordem, `run()` completo ou `OUTPUT_LIMIT`, `RunResult` descreve a execução inteira, `lines()` e `mergeStderr`, `.cmd` via `cmd.exe` com escaping seguro. Congelado (D5).
