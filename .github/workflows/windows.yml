@@ -33,5 +33,6 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace -- ${{ inputs.filter }}
+      - run: cargo build --workspace --bins
+      - run: cargo test --workspace --no-fail-fast -- ${{ inputs.filter }}
         shell: bash
