@@ -18,6 +18,7 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
+use std::io::Write;
 use std::process::ExitCode;
 
 /// The parsed command line.
@@ -50,7 +51,11 @@ fn main() -> ExitCode {
     let args = match parse(std::env::args().skip(1)) {
         Ok(args) => args,
         Err(e) => {
-            eprintln!("hugr-omni-supervisor: {e}. It is started by the hugr-omni library, not by hand.");
+            // Never `eprintln!`: a closed or full stderr must not panic or block the supervisor.
+            let _ = writeln!(
+                std::io::stderr().lock(),
+                "hugr-omni-supervisor: {e}. It is started by the hugr-omni library, not by hand."
+            );
             return ExitCode::from(2);
         }
     };
