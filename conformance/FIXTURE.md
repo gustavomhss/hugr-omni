@@ -32,10 +32,17 @@ escapes `\n \r \t \\ \xHH` (`\xHH` writes a raw byte, so invalid UTF-8 is expres
 | `tree=<n>[:resist]` | start a chain of `n` descendants (child, grandchild, ...); each prints `PID <level> <pid>` (level 1..n) once running, then hangs; `:resist` makes them `ignore-term` |
 | `hold=<ms>` | start one descendant that keeps the fixture's stdout and stderr open for `ms`, printing nothing |
 | `escape` | Unix: start a descendant that calls `setsid`, prints `ESCAPED <pid>`, hangs. Windows: try `CREATE_BREAKAWAY_FROM_JOB`; print `ESCAPED <pid>` if it was created, else `ESCAPE-REFUSED` |
-| `pidlog=<path>` | append its pid and a newline to `path` (the QA orphan oracle) |
+| `pidlog=<path>` | append its pid and a newline to `path` (the QA orphan oracle); every descendant started after it (`tree`, `hold`, `escape`) appends its own pid there too |
+| `watch=<stdout\|stderr>:<n>:<path>` | wait until `path` holds `n` complete lines, then print `LOGGED <line>` for each (C-TMO-02, C-RUN-01, C-IO-02: an external marker for a process the scenario cannot read, e.g. a `run`) |
 | `tty` | print `{"stdin":bool,"stdout":bool,"stderr":bool,"cols":n,"rows":n}` (size 0 x 0 without a terminal) |
 | `sizes` | print `SIZE <cols> <rows>` now and on every terminal resize, until stdin ends |
+| `repeat=<stdout\|stderr>:<n>:<text>` | write `text` `n` times, no newline added (C-IO-01: a line over 1 MiB of multi-byte characters) |
+| `getenv=<NAME>` | print `<name>=<value as a JSON string>` for every variable named `NAME` ignoring ASCII case (sorted), or `<NAME> unset` (C-ENV-01: absence and uniqueness without look-around) |
+| `copy-self=<path>` | copy this executable to `path`, creating its directory (C-SPAWN-01, C-SPAWN-03: a program only the child's `PATH` or `cwd` can find) |
 
-Descendants are the fixture itself (same binary), started without a shell, inheriting stdio unless stated.
+Descendants are the fixture itself (same binary), started without a shell, inheriting stdio unless stated. They run
+the internal steps `_level=<k>:<n>[:resist]` (`tree`) and `_escaped` (`escape`); an escaped descendant exits after
+60 s, because nothing else ends it. `argv` and `env` print compact JSON in ASCII: non-ASCII characters as `\uXXXX`
+(UTF-16, lowercase hex).
 
 W01 owns this file after W00 and may add a verb when an Appendix A item needs it; every verb added is listed here.
