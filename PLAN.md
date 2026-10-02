@@ -648,6 +648,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | W03 | **no `bundle/B2`** (Codex: aprovado na rodada 3; probe do PATHEXT vermelho) | `75e8e90` | C-SPAWN-01/03, C-ENV-01, C-ERR-01/02 provados por 22 testes unitários; ponta a ponta com o B2 |
 | W06 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe do quoting vermelho no Windows) | `031eb1b` | SUP-W + C-SPAWN-02 verdes em Server 2025 (26100) e 2022 (20348) |
 | W04 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe `bInheritHandles=1` vermelho no Windows) | `ac5c023` | PROTO-01 verde em macOS, Linux e Windows; a prova do lead "matar o supervisor durante um flood" com o supervisor real fica para quando o W05 entrar |
+| W05 | **no `bundle/B2`** (Codex: aprovado na rodada 6; probe sessão→grupo vermelho; o gate a frio sob carga achou a corrida de membro saindo no macOS, corrigida) | `a44901c` | SUP-U verde em macOS (também sob carga), Linux --privileged e musl estático |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
