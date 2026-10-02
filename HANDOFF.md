@@ -15,13 +15,11 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   - execução: sub-agentes Claude Opus, um por worktree (`.claude/worktrees/agent-*`, ignorado pelo git), branch
     `wp/<id>`;
   - revisão: Codex CLI contra o card do WP;
-  - prompt da revisão: `scratchpad/reviews/wp-prompt.py`, regenerável a partir do Apêndice D do PLAN.
-- **Credenciais:** a conta ativa do `gh` pode ser outra (`gustavomhss`). Nunca trocar a conta nem mexer em config
-  global; usar o token do `gmhelmold` comando a comando:
-  - push: `git -c credential.helper= -c credential.helper='!f(){ echo username=gmhelmold; echo "password=$(gh auth token --user gmhelmold)"; }; f' push ...`
-  - gh: `GH_TOKEN=$(gh auth token --user gmhelmold) gh ... -R gmhelmold/hugr-omni`
+  - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
+- **Credenciais:** `gusmhs` é a única conta no `gh` (a `gmhelmold` foi suspensa em 2026-10-02). Push com `git push`;
+  gh com `-R gusmhs/hugr-omni`. Nunca trocar a conta nem mexer em config global.
 
-## Repo `gmhelmold/hugr-omni`
+## Repo `gusmhs/hugr-omni`
 
 - **`main` = `ee40167`:** B0 + B1a (PR #2), com o contrato congelado, o ADR-0005 e o scaffold W00 completo:
   - workspace de 4 crates;

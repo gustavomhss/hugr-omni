@@ -11,8 +11,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PUSH = ("git -c credential.helper= -c credential.helper='!f(){ echo username=gmhelmold; "
-        "echo \"password=$(gh auth token --user gmhelmold)\"; }; f' push")
+PUSH = "git push"
 
 
 def main() -> None:
@@ -33,8 +32,8 @@ STEP 0  In your worktree run `git fetch -q origin && git switch -c wp/{wp} {base
         then `git merge-base --is-ancestor {base} HEAD` (abort if it fails). Echo BASELINE_VERIFIED {base}.
 PUSH    on the first commit that compiles, and early and often after that (wp/* never runs CI):
         {PUSH} -u origin wp/{wp}
-        Never switch the active gh account or change any global git/gh config. For gh commands prefix
-        GH_TOKEN=$(gh auth token --user gmhelmold) and pass -R gmhelmold/hugr-omni.
+        Never switch the active gh account or change any global git/gh config. For gh commands pass
+        -R gusmhs/hugr-omni.
 READ    AGENTS.md (binding) · your card below · docs/api-contract.md · docs/adr/0005-supervisor.md · docs/protocol.md ·
         conformance/SPEC.md · conformance/FIXTURE.md · GUARANTEES.md · the seam files you call or implement.
 CARD    (the axioms an independent Codex review judges you against, field by field):

@@ -1,7 +1,7 @@
 # hugr-omni — Plano de execução
 
 > Status: **G0 assinado (B)** · contrato congelado (D5) · primeira onda (W00, W01, W03–W06) na `main` (PR #4) · segunda onda (W02, W07, W10, W12w) no `bundle/B3` · 2026-10-02
-> Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
+> Repo: `gusmhs/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
 ---
@@ -25,7 +25,7 @@
 | # | Decisão | Estado |
 |---|---|---|
 | D1 | Nome | ✅ `hugr-omni` (livre em npm, PyPI e crates.io) |
-| D2 | Repo | ✅ `gmhelmold/hugr-omni`, público (transferido da HuGR-Labs, cujo Actions estava travado por billing) |
+| D2 | Repo | ✅ `gusmhs/hugr-omni`, público (HuGR-Labs → `gmhelmold` por billing; → `gusmhs` após a suspensão da `gmhelmold`) |
 | D3 | Pasta local | ✅ `~/Documents/HuGR/hugr-omni` |
 | D4 | Licença | ✅ MIT OR Apache-2.0 |
 | D5 | Contrato da API | ✅ aprovado e congelado pelo lead (2026-10-02): `docs/api-contract.md` |
@@ -33,7 +33,7 @@
 | D7 | PRs em bundle para economizar CI | ✅ diretriz do Owner (2026-10-01) |
 | D9 | G0: núcleo próprio enxuto, TS primeiro (opção B; `docs/decisions/G0.md`) | ✅ assinado pelo Owner (2026-10-01) |
 | D10 | Linguagens: TypeScript (Node/Bun/Deno) no v0.1; Python e Rust (pacotes publicados) no v0.2 | ✅ Owner (2026-10-01) |
-| D11 | CI funcionando | ✅ repo transferido para `gmhelmold` (2026-10-02); jobs voltaram a rodar nos 5 alvos |
+| D11 | CI funcionando | ✅ repo em `gusmhs` (2026-10-02); os jobs rodam nos 5 alvos |
 | D12 | Papéis: o usuário é **stakeholder**; o lead aprova as decisões técnicas (contrato, gates, merges, go/no-go técnico) | ✅ diretriz do stakeholder (2026-10-02) |
 | D8 | Monolito modular + god-file guard (400 ideal · 600 ok · 650 máximo por arquivo de código; não vale para documentos; é por arquivo, não por PR) | ✅ diretriz do Owner (2026-10-01) |
 
@@ -823,4 +823,5 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-02 · Lead: as revisões do Codex rejeitaram os ADRs 0001–0003 como base de produto, pela mesma causa raiz: trabalho de ciclo de vida dentro do host. Ficam proibidos fork no host, mudança de estado de console ou de sinais do host, e zumbis "pinados" que um host com reaper agressivo destrói. **Decisão (ADR-0005):** um supervisor (binário próprio, iniciado por exec, uma vez por host) cria e colhe todos os filhos; o I/O continua no host via fds/handles passados. A validação é o spike S5. Os testes de spike e de produto precisam **afirmar** o resultado (print não é aceite).
 - 2026-10-02 · Stakeholder: "quem aprova é você" → o lead aprova as decisões técnicas (D12). Contrato da API revisado pelo Codex em 3 rodadas (rework → rework → freeze_after_fixes); as decisões estão em `docs/api-contract.md`: `stop()` no lugar de `kill()`, stdin fechado por padrão, saída sempre drenada com perda avisada em ordem, `run()` completo ou `OUTPUT_LIMIT`, `RunResult` descreve a execução inteira, `lines()` e `mergeStderr`, `.cmd` via `cmd.exe` com escaping seguro. Congelado (D5).
 - 2026-10-02 · Owner: repo transferido de `HuGR-Labs` para `gmhelmold` porque o Actions da org estava travado por billing ("account is locked due to a billing issue"); o GitHub mantém redirect do endereço antigo.
+- 2026-10-02 · Owner: a conta `gmhelmold` foi suspensa pelo GitHub sem aviso, e o repo saiu do ar. O histórico foi republicado a partir do clone local em `gusmhs/hugr-omni`. Os links de execuções de CI nos ADRs 0001–0003 e 0005 apontam para o repo antigo e não abrem mais; os resultados registrados nos ADRs continuam valendo como registro.
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).
