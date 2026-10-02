@@ -4,7 +4,12 @@
 //! Everything here is pure: no process is started and nothing is executed (contract §3).
 
 mod env;
+mod path;
 mod resolve;
+#[cfg(unix)]
+mod sys;
+#[cfg(test)]
+mod tests;
 mod validate;
 
 use std::ffi::OsString;
@@ -16,6 +21,17 @@ use crate::types::{PtySize, Stdin};
 
 /// Default `grace` (contract §5).
 pub(crate) const DEFAULT_GRACE: Duration = Duration::from_millis(2000);
+
+/// Whose rules a pure function applies. A parameter, so the Windows rules (PATHEXT, case-insensitive names) are
+/// tested on every OS.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Os {
+    Unix,
+    Windows,
+}
+
+/// The rules of the OS this library runs on.
+const HOST: Os = if cfg!(windows) { Os::Windows } else { Os::Unix };
 
 /// Pipes or a terminal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,7 +95,7 @@ pub(crate) struct Spec {
 /// Validates `req` per contract §3 (InvalidArgument / InvalidCwd), builds the final environment and resolves the program
 /// against the child's final PATH (NotFound / NotExecutable). Never starts or executes anything.
 pub(crate) fn prepare(req: &Request) -> Result<Spec, Error> {
-    validate::check(req)?;
+    validate::check(req, HOST)?;
     let env = env::build(req);
     let cwd = validate::cwd(req)?;
     let program = resolve::program(&req.program, &env, &cwd)?;
