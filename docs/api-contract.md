@@ -110,8 +110,8 @@ Exit / RunResult · OmniError.
   line cut by a gap is yielded as it was.
 - **Text mode** decodes UTF-8 incrementally across chunks; invalid bytes become U+FFFD. **Bytes mode** is
   lossless. `lines()` splits on `\n` (a trailing `\r` is removed) and yields a final unterminated line at EOF;
-  a line longer than 1 MiB is yielded in pieces cut at UTF-8 character boundaries, every piece but the last
-  marked `continues: true`.
+  a line longer than 1 MiB is yielded in pieces of at most 1 MiB, each the longest prefix that ends at a UTF-8
+  character boundary, every piece but the last marked `continues: true`.
 - **Order:** chunks come in the order the library observed them; exact chronology between two pipes is not
   guaranteed. `mergeStderr: true` sends stderr into the stdout pipe at the OS level for a single chronological
   stream (then `stream` is always `"stdout"`).
