@@ -770,6 +770,10 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - **registro de pendências** `conformance/pending.txt`: um item pendente que falha conta como `pending`, e um que passa falha o CI até sair do registro. Só o lead edita, e ele tem que estar vazio no release;
   - o `unsafe` do fixture fica restrito a `omni-fixture/src/sys`;
   - as 4 ambiguidades do SPEC que o primeiro runner resolveu viraram regra no SPEC.
+- 2026-10-02 · Lead, rodada 2 do W05:
+  - "revezamento" adversário (fork e saída mais rápidos que a varredura, sempre no intervalo exato) fica como limitação declarada no GUARANTEES, sem código novo. Não dá capacidade nova a um adversário, que já escapa mais fácil com `setsid` (declarado). O modelo de ameaça do exec é programa comum ou com bug; conter código hostil é o trabalho da sandbox;
+  - o P1 de `unwrap` em teste unitário era falso positivo: o `clippy.toml` permite `unwrap` em `#[test]`, e o clippy do lead passou;
+  - os diagnósticos dos dois supervisores nunca usam `eprintln!` no loop de controle: vão por fila limitada, em thread própria, com escrita que pode falhar.
 - 2026-10-02 · Lead, retrabalho do W06: um `Stop` nunca fica sem resposta (K2). No Windows, com o Job vazio (a verdade do kernel), a prova extra por pid espera no máximo 1 s; se ainda não der para inspecionar um membro, o `Stopped` sai mesmo assim e o fato vai para o stderr (o caso residual está declarado no GUARANTEES). O limite é de 4096 árvores por supervisor nos dois OS (`docs/protocol.md`). As constantes `JOB_OBJECT_MSG_*` foram definidas localmente a partir do `winnt.h`, em vez de ligar mais um feature do `windows-sys`.
 - 2026-10-02 · Lead, entrega do W04: aprovado o feature `Win32_System_LibraryLoader` do `windows-sys` para achar o supervisor ao lado do módulo nativo no Windows (é como o pacote npm o distribui); `FailCode::Invalid` vira `INVALID_ARGUMENT`; o K4 em release é medido como max(0,2 ms, 3× um ping-pong de socketpair na mesma execução), só em release, e a prova oficial do K4 continua no QA (Q1).
 - 2026-10-02 · Lead, rodada 2 do W03:

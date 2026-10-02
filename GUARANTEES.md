@@ -9,7 +9,7 @@ The promises themselves are `docs/api-contract.md`; the items are `docs/acceptan
 | | Linux | macOS | Windows |
 |---|---|---|---|
 | Kill unit | the root's session | the root's session | the Job (no breakaway) |
-| A descendant that leaves on purpose | `setsid` (a new session) **escapes** (declared); changing process group inside the session stays contained | same as Linux | cannot leave: breakaway is refused |
+| A descendant that leaves on purpose | `setsid` (a new session) **escapes** (declared); changing process group inside the session stays contained. A deliberate "relay" — processes that fork and exit faster than the supervisor's scans, every time — can likewise evade confirmation; ordinary programs never do this, and containing hostile code is the sandbox's job | same as Linux | cannot leave: breakaway is refused |
 | Graceful stop | SIGTERM (+SIGHUP for a PTY) + SIGCONT to the session | same as Linux | CTRL_BREAK to console processes (best effort); `ClosePseudoConsole` for a PTY |
 | Forced stop after `graceMs` | SIGKILL until the session is empty: guaranteed | same as Linux | `TerminateJobObject`: guaranteed; `stop()` resolves when the Job is empty and every member's handle is signalled, or at most 1 s after the Job is empty when a member cannot be inspected (a process that denies SYNCHRONIZE, or a lost Job notification) |
 | Host process dies (any way, incl. SIGKILL) | the supervisor stops every tree within its grace; if its descriptor limit is forced below its 3 reserved descriptors, members outside the root's process group can be unreachable, and it then exits 1 with a stderr report (never 0) | same as Linux | same, and the Jobs close if the supervisor dies too |
