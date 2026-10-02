@@ -90,6 +90,8 @@ Exit / RunResult · OmniError.
   - PTY `cols`/`rows`: integers from 1 to 32767.
   - Strings (`command`, `args`, `cwd`, `env` keys and values) must not contain NUL; an `env` key must not be empty
     or contain `=`.
+- On Windows a drive-relative path (`C:dir`, relative to a per-drive current directory) is rejected:
+  `INVALID_ARGUMENT` for `command`, `INVALID_CWD` for `cwd`, each saying to write the full path.
 - `inheritEnv: false` on Windows still passes `SystemRoot` from the host unless `env` sets or removes it (many
   programs cannot start without it); nothing is added elsewhere.
 
