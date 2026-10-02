@@ -58,6 +58,8 @@ released `id` gets `Ack unknown` for every request.
 
 - **Unsolicited:** `Ready` (once, first) and `Exited` (at root exit; descendants may live on).
 - **Tree ids:** never reused by one supervisor; the host pairs them with the supervisor generation.
+- **Limit:** a supervisor holds at most 4096 trees (live or not yet released); a `Spawn` beyond that gets
+  `SpawnFailed io` with a message naming the limit.
 
 **Descriptors.** I/O never crosses the supervisor.
 - **Unix pipes:** the child ends of the pipes travel as SCM_RIGHTS on the `Spawn` frame, in stdin, stdout, stderr

@@ -11,7 +11,7 @@ The promises themselves are `docs/api-contract.md`; the items are `docs/acceptan
 | Kill unit | the root's session | the root's session | the Job (no breakaway) |
 | A descendant that leaves on purpose | `setsid` (a new session) **escapes** (declared); changing process group inside the session stays contained | same as Linux | cannot leave: breakaway is refused |
 | Graceful stop | SIGTERM (+SIGHUP for a PTY) + SIGCONT to the session | same as Linux | CTRL_BREAK to console processes (best effort); `ClosePseudoConsole` for a PTY |
-| Forced stop after `graceMs` | SIGKILL until the session is empty: guaranteed | same as Linux | `TerminateJobObject`: guaranteed |
+| Forced stop after `graceMs` | SIGKILL until the session is empty: guaranteed | same as Linux | `TerminateJobObject`: guaranteed; `stop()` resolves when the Job is empty and every member's handle is signalled, or at most 1 s after the Job is empty when a member cannot be inspected (a process that denies SYNCHRONIZE, or a lost Job notification) |
 | Host process dies (any way, incl. SIGKILL) | the supervisor stops every tree within its grace | same as Linux | same, and the Jobs close if the supervisor dies too |
 | Supervisor process dies | trees keep running, **unprotected** (declared); the next spawn starts a new supervisor | same as Linux | trees die with their Jobs |
 | PID reuse | a gone tree is never signalled again (root pinned until the session is empty) | same as Linux | the root handle is held until the tree is gone and released |
