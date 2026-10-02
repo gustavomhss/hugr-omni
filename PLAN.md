@@ -457,7 +457,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** criar e fechar o ConPTY (`pty_windows`, que é do W12w; o `CreateProcessW` com o atributo `PSEUDOCONSOLE` é deste WP).
 
 #### W07 · Child: kill de árvore e saída
-- **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{mod,child,exit}.rs`
+- **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/**`, exceto `deadline.rs` e `run.rs` (do W09)
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-PROC-01, C-SCOPE-01.
 - **Sucesso:** depois de `stop()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
 - **Invariantes:** `kill` idempotente; `drop` não bloqueia; `wait` tem uma fonte única de verdade; `Exit` vem de uma função pura.
@@ -499,7 +499,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** emulador de terminal.
 
 #### W12w · ConPTY no supervisor
-- **Agente:** Opus · **Depende:** W06, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_windows/**`
+- **Agente:** Opus · **Depende:** W06, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_windows/**`, `crates/omni-supervisor/tests/windows_pty*.rs` e o roteamento do PTY em `src/windows/spawn.rs`
 - **Completude:** PTYSYS-W.
 - **Sucesso:** um escritor teimoso com `graceMs` = 1000 termina dentro do prazo no Windows 11 e no Server 2022, e o host nunca muda o estado de console.
 - **Invariantes:** flags 0, ponta do PTY fechada, handles padrão nulos explícitos; `ClosePseudoConsole` num worker com prazo independente; o filho nasce no Job.
