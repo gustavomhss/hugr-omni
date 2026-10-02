@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API congelado (D5) · W00 (scaffold + seams) em revisão · 2026-10-02
+> Status: **G0 assinado (B)** · contrato congelado (D5) · W00 na `main` · primeira onda (W01, W03–W06) em execução no `bundle/B2` · 2026-10-02
 > Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -644,7 +644,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
 | S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
-| W00 | **aprovado (lead, após 3 rodadas do Codex)** | `bundle/B1` → PR para `main` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
+| W00 | **concluído · na `main`** (PR #2, CI verde nos 3 OS + musl) | `main` `ee40167` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
