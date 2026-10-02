@@ -60,7 +60,8 @@ failure, never a pass.
 Regexes use only the subset that JavaScript and Rust's `regex` crate read the same way. The accepted subset and
 its expected matches are `conformance/regex-table.json`, which every runner checks itself against. Among other
 things, it allows no look-around, backreferences, named groups, flags, `\s`, `\b` or `\p`; `\d` and `\w` are ASCII,
-and `.` matches neither `\n`, `\r`, U+2028 nor U+2029.
+and `.` matches neither `\n`, `\r`, U+2028 nor U+2029. Matching is by Unicode code point: the JS runner
+compiles every pattern with the `u` flag.
 
 `until.match` and `capture` regexes are applied to **complete lines** (without the line end), assembled by the runner
 in both chunk and line mode, so a marker split across chunks is never matched or captured half-way. A capture
