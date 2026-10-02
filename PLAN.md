@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **aprovado para Fase 0; contrato da API aguardando aprovação do Owner (D5)** · 2026-10-01
+> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API aguardando aprovação do Owner (D5) · CI bloqueado por billing da org · 2026-10-01
 > Repo: `HuGR-Labs/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -31,6 +31,9 @@
 | D5 | **Aprovar o contrato da API (seção 3)** | ⏳ pendente: bloqueia o W00, não bloqueia a Fase 0 |
 | D6 | Estratégia de testes: contrato enxuto + QA com KPIs | ✅ diretriz do Owner (2026-10-01) |
 | D7 | PRs em bundle para economizar CI | ✅ diretriz do Owner (2026-10-01) |
+| D9 | G0: núcleo próprio enxuto, TS primeiro (opção B; `docs/decisions/G0.md`) | ✅ assinado pelo Owner (2026-10-01) |
+| D10 | Linguagens: TypeScript (Node/Bun/Deno) no v0.1; Python e Rust (pacotes publicados) no v0.2 | ✅ Owner (2026-10-01) |
+| D11 | Destravar o billing do GitHub Actions da HuGR-Labs | ⏳ pendente: sem isso não há prova em Windows |
 | D8 | Monolito modular + god-file guard (400 ideal · 600 ok · 650 máximo por arquivo de código; não vale para documentos; é por arquivo, não por PR) | ✅ diretriz do Owner (2026-10-01) |
 
 Também ficam com você, em paralelo e sem bloquear o build:
@@ -239,6 +242,7 @@ O baseline do stdlib roda os mesmos workloads e registra os K1/K2 dele. A difere
 - **INV-12** Dependência nova só com aprovação do lead (allowlist no `AGENTS.md`).
 - **INV-13** Testes de contrato são somente-leitura para quem implementa.
 - **INV-14** Nenhum arquivo de código rastreado passa de 650 linhas (`scripts/file-size-guard.py`; documentos e dados ficam fora). Não há lista de exceções.
+- **INV-16** A saída de um processo filho nunca é observada pelo reaper de SIGCHLD do tokio: usa `waitpid` bloqueante por filho ou pidfd (Linux ≥ 5.3). Motivo: o S3 (Q8) mediu travamento determinístico dentro de Node e Bun no Linux sem pidfd.
 - **INV-15** Camadas do monolito: dependências só para baixo na tabela "Arquitetura interna"; nenhum módulo importa uma camada acima.
 
 ### 4.4 Quality standards globais (QS)
@@ -328,7 +332,7 @@ Fase 0   R1 · R2 · S1 · S2 · S3   (+ H0)          → WG0 gate (Owner assina
 Fase 1   W00 (lead) → W01 · W02                                               [B1]
          → W03 · W05 · W06 · W10 → W07 → W09                                  [B2]
          → W12 · W12w                                                         [B3]
-         → W13 · W15 · W14                                                    [B4]
+         → W13 · W14   (W15 Python e publicação Rust no v0.2)                 [B4]
          → W18 · Q1 → Q2 → correções                                          [B5]
          → W21                                                                [B6]
 Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                                     [B7, B8]
@@ -456,7 +460,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 #### W02 · Runners TS e Python
 - **Agente:** Sonnet · **Revisor:** Codex (vacuidade) · **Depende:** W00, W01 · **Escreve:** `bindings/node/test/**`, `bindings/python/tests/**`
-- **Completude:** ACC-02: runner TS sem framework (Node/Bun/Deno), runner pytest (sync e aio) e os testes dos itens de idioma C-TS-01 e C-PY-01 (vermelhos; quem os torna verdes são o W13 e o W15).
+- **Completude:** ACC-02: runner TS sem framework (Node/Bun/Deno) e os testes do item de idioma C-TS-01 (vermelhos; quem os torna verdes é o W13). O runner pytest e o C-PY-01 entram no v0.2.
 - **Sucesso:** o mesmo `scenarios/*.json` roda nos 5 runtimes, e o número de cenários executados bate com o total.
 - **Invariantes:** o runner só lê os cenários; `skipped` conta como falha.
 - **Qualidade:** cada runner com ≤ ~300 linhas; a falha mostra cenário, passo e esperado vs obtido.
@@ -553,7 +557,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** QA-A, QA-B e QA-E em Node locais com K1 = K2 = 0; o Codex revisa a fronteira FFI.
 - **Não fazer:** mexer em `package.json` (é do W14).
 
-#### W15 · Binding Python
+#### W15 · Binding Python (v0.2)
 - **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/python/src/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/python/python/hugr_omni/{__init__,aio}.py`
 - **Completude:** C-PY-01 (idiomas e host Python), C-PY-02 (todos os cenários via Python sync e aio, em 3.10 e 3.14).
 - **Sucesso:** os quickstarts Python rodam como estão escritos.
@@ -564,8 +568,8 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 #### W14 · Empacotamento (npm, PyPI, crates.io)
 - **Agente:** Sonnet · **Depende:** W00, ADR-0004 · **Escreve:** `bindings/node/{package.json,npm/**}`, `bindings/python/pyproject.toml`, `crates/hugr-omni/examples/**`, `.github/workflows/pkg.yml`
-- **Completude:** C-PKG-01.
-- **Sucesso:** K9 = 100%: instalação limpa nos 5 alvos × npm/bun/deno/pip/uv/cargo, hello em < 30 s.
+- **Completude:** C-PKG-01 — no v0.1, só npm (Node/Bun/Deno); PyPI e crates.io entram no v0.2.
+- **Sucesso:** K9 = 100%: instalação limpa nos 5 alvos × npm/bun/deno (v0.1), hello em < 30 s. Snippets prontos no ADR-0004.
 - **Invariantes:** nenhum `postinstall` que compile ou baixe; nenhuma sdist que compile de surpresa.
 - **Qualidade:** mensagem clara para plataforma não suportada; metadados completos nos 3 registries.
 - **DoD:** `npm pack`, wheel e `cargo publish --dry-run` instalados em runner limpo (no CI completo do B4).
@@ -590,7 +594,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** dashboard; histórico em banco.
 
 #### Q2 · Usuário frio (K10)
-- **Quem:** o lead despacha 3 agentes Sonnet novos, só com o README (um por linguagem) · **Depende:** W18 · **Escreve:** `docs/ux/**`
+- **Quem:** o lead despacha agentes Sonnet novos, só com o README (v0.1: TS; v0.2: Python e Rust) · **Depende:** W18 · **Escreve:** `docs/ux/**`
 - **Completude:** UX-01.
 - **Sucesso:** 15/15 tarefas; mediana até o primeiro sucesso ≤ 5 min. Cada atrito vira um WP de correção, e o teste roda de novo com agentes novos.
 - **Invariantes:** os agentes nunca veem código, plano ou conversa.
@@ -673,17 +677,16 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 | WP | Estado | Branch / PR | Notas |
 |---|---|---|---|
-| R2 | em execução | — | dispatch 2026-10-01 |
-| R1 | concluído | `docs/research/landscape.md` | achou o processkit (Rust + Python, MIT): 81,8% nos 3 OS |
-| S1 | pausado | `spike/process` (só local) | perguntas cobertas pelo processkit; volta se a avaliação reprovar |
-| S2 | pausado | `spike/pty` (só local) | idem |
-| S3 | em execução | `spike/packaging` | + Q7: addon napi sobre o processkit nos 5 alvos |
-| P0 | em execução | `docs/research/processkit-fit.md` | encaixe do contrato no processkit (Y/A/U/X por item) |
-| E1 | em execução | `spike/processkit-eval` | avaliação prática do processkit nos 3 OS com KPIs + a suíte deles |
-| Codex | em execução | — | auditoria independente do código-fonte do processkit v3.3.4 |
-| B0 | montando | `bundle/B0` | recebe pesquisa + ADRs + G0 |
-| demais | não iniciado | — | W00 aguarda G0 + D5 |
-
+| R1 | concluído | `docs/research/landscape.md` | processkit 81,8% no papel |
+| R2 | concluído + verificado | `docs/research/pain.md` | dor nos 3 ecossistemas (teto, não medida) |
+| P0 | concluído | `docs/research/processkit-fit.md` | 1 de 24 itens como está |
+| E1 | concluído (macOS + Linux parcial) | `spike/processkit-eval` | Windows não medido (billing) |
+| Codex | concluído | `docs/research/processkit-audit.md` | "build on it with fixes" |
+| S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
+| WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
+| S1, S2 | pausados | `spike/process`, `spike/pty` (só local) | retomam quando o billing destravar (precisam de Windows) |
+| B0 | montando | `bundle/B0` | pesquisa + ADR-0004 + G0; falta Codex conferir citações do R1 |
+| W00 | aguardando | — | depende de D5 (API) e D11 (billing) |
 ---
 
 ## 9. Riscos
@@ -799,4 +802,5 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
 - 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
+- 2026-10-01 · **G0 assinado: opção B.** A evidência medida (fit: 1 de 24 itens como está; perda silenciosa de saída; travamento sob Node/Bun no Linux sem pidfd; churn alto) mostrou que construir em cima do processkit nos faria reescrever I/O, timers, motivos, saída do host e o wait, mantendo uma dependência de 86 mil linhas. O processkit fica como **referência** (MIT): reaproveitamos técnicas (filho suspenso → Job → resume; cgroup v2 quando delegado), sem dependência de código. Linguagens: TS no v0.1; Python e Rust no v0.2. S1/S2 retomam assim que o billing do Actions for destravado (precisam de Windows).
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).

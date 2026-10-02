@@ -38,13 +38,13 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-PTY-04 | `kill()` on a PTY process ends its whole tree on 3 OS | W12 |
 | C-TS-01 | TS idioms and host: `for await`, `await using`, `AbortSignal`, `OmniError.code`, zero `any` in the d.ts; a live Child keeps the event loop alive; GC never kills a child; normal end / `process.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES on Node, Bun, Deno | W13 |
 | C-TS-02 | Every contract scenario passes through TS on Node 22/24 (5 targets), Bun and Deno (3 OS) | W13 |
-| C-PY-01 | Python idioms and host: `with`/`async with`, KeyboardInterrupt and task cancel kill and re-raise, `CommandNotFoundError` is a `FileNotFoundError`, `.pyi` clean under `pyright --strict`, waits release the GIL; normal end / `sys.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES | W15 |
-| C-PY-02 | Every contract scenario passes through Python sync and asyncio on CPython 3.10 and 3.14, 5 targets | W15 |
-| C-PAR-01 | The glossary has ≤ 16 concepts and none of the excluded capabilities; every public function, option and result field of each language maps to it, and each concept exists in all 3 languages; CI fails on drift | W18 |
+| C-PY-01 (v0.2) | Python idioms and host: `with`/`async with`, KeyboardInterrupt and task cancel kill and re-raise, `CommandNotFoundError` is a `FileNotFoundError`, `.pyi` clean under `pyright --strict`, waits release the GIL; normal end / `sys.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES | W15 |
+| C-PY-02 (v0.2) | Every contract scenario passes through Python sync and asyncio on CPython 3.10 and 3.14, 5 targets | W15 |
+| C-PAR-01 (v0.2) | The glossary has ≤ 16 concepts and none of the excluded capabilities; every public function, option and result field of each language maps to it, and each concept exists in all 3 languages; CI fails on drift | W18 |
 | C-ARC-01 | All process semantics live in the Rust core; TS loads it via Node-API, Python via a CPython extension; binding sources never spawn/signal processes or implement timeouts | W18 |
 | C-GUA-01 | Every GUARANTEES row has per-OS status and links the scenario or KPI that proves it; CI fails on a missing link | W18 |
 | C-DOC-01 | The root README and guide lead with TypeScript (Python and Rust as equals); each language quickstart ≤ 10 lines; every README code block runs in CI on 3 OS | W18 |
-| C-PKG-01 | Clean install with no compiler on 5 targets × npm / bun / deno / pip / uv / cargo runs the hello example (= K9) | W14 |
+| C-PKG-01 | Clean install with no compiler on 5 targets runs the hello example (= K9): npm / bun / deno in v0.1; pip / uv / cargo in v0.2 | W14 |
 | C-REL-01 | One tag publishes npm, PyPI and crates.io at the same version; post-publish smoke passes on 5 targets; CHANGELOG and SemVer 0.x policy published | W21 |
 
 Sandbox (phases 2–3):
