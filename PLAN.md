@@ -1,7 +1,7 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API aguardando aprovação do Owner (D5) · CI bloqueado por billing da org · 2026-10-01
-> Repo: `HuGR-Labs/hugr-omni` (público) · Licença: MIT OR Apache-2.0
+> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API aguardando aprovação do Owner (D5) · 2026-10-01
+> Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
 ---
@@ -25,7 +25,7 @@
 | # | Decisão | Estado |
 |---|---|---|
 | D1 | Nome | ✅ `hugr-omni` (livre em npm, PyPI e crates.io) |
-| D2 | Repo | ✅ `HuGR-Labs/hugr-omni`, público |
+| D2 | Repo | ✅ `gmhelmold/hugr-omni`, público (transferido da HuGR-Labs, cujo Actions estava travado por billing) |
 | D3 | Pasta local | ✅ `~/Documents/HuGR/hugr-omni` |
 | D4 | Licença | ✅ MIT OR Apache-2.0 |
 | D5 | **Aprovar o contrato da API (seção 3)** | ⏳ pendente: bloqueia o W00, não bloqueia a Fase 0 |
@@ -33,7 +33,7 @@
 | D7 | PRs em bundle para economizar CI | ✅ diretriz do Owner (2026-10-01) |
 | D9 | G0: núcleo próprio enxuto, TS primeiro (opção B; `docs/decisions/G0.md`) | ✅ assinado pelo Owner (2026-10-01) |
 | D10 | Linguagens: TypeScript (Node/Bun/Deno) no v0.1; Python e Rust (pacotes publicados) no v0.2 | ✅ Owner (2026-10-01) |
-| D11 | Destravar o billing do GitHub Actions da HuGR-Labs | ⏳ pendente: sem isso não há prova em Windows |
+| D11 | CI funcionando | ✅ repo transferido para `gmhelmold` (2026-10-02); jobs voltaram a rodar nos 5 alvos |
 | D8 | Monolito modular + god-file guard (400 ideal · 600 ok · 650 máximo por arquivo de código; não vale para documentos; é por arquivo, não por PR) | ✅ diretriz do Owner (2026-10-01) |
 
 Também ficam com você, em paralelo e sem bloquear o build:
@@ -684,9 +684,9 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | Codex | concluído | `docs/research/processkit-audit.md` | "build on it with fixes" |
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
-| S1, S2 | pausados | `spike/process`, `spike/pty` (só local) | retomam quando o billing destravar (precisam de Windows) |
-| B0 | montando | `bundle/B0` | pesquisa + ADR-0004 + G0; falta Codex conferir citações do R1 |
-| W00 | aguardando | — | depende de D5 (API) e D11 (billing) |
+| S1, S2 | prontos para retomar | `spike/process`, `spike/pty` (só local) | CI destravado; retomam no núcleo próprio (Windows) |
+| B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
+| W00 | aguardando | — | depende de D5 (API) |
 ---
 
 ## 9. Riscos
@@ -803,4 +803,5 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
 - 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
 - 2026-10-01 · **G0 assinado: opção B.** A evidência medida (fit: 1 de 24 itens como está; perda silenciosa de saída; travamento sob Node/Bun no Linux sem pidfd; churn alto) mostrou que construir em cima do processkit nos faria reescrever I/O, timers, motivos, saída do host e o wait, mantendo uma dependência de 86 mil linhas. O processkit fica como **referência** (MIT): reaproveitamos técnicas (filho suspenso → Job → resume; cgroup v2 quando delegado), sem dependência de código. Linguagens: TS no v0.1; Python e Rust no v0.2. S1/S2 retomam assim que o billing do Actions for destravado (precisam de Windows).
+- 2026-10-02 · Owner: repo transferido de `HuGR-Labs` para `gmhelmold` porque o Actions da org estava travado por billing ("account is locked due to a billing issue"); o GitHub mantém redirect do endereço antigo.
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).

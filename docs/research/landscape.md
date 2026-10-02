@@ -623,3 +623,11 @@ Rows are candidates (mandatory first, then those found by the searches). Click a
 [zp_rd]: https://github.com/pithings/zigpty
 [zx_core]: https://github.com/google/zx/blob/HEAD/src/core.ts
 [zx_rd]: https://github.com/google/zx/blob/HEAD/README.md
+
+## Lead verification (2026-10-01)
+
+Codex fact-checked 20 Y/P cells across 11 candidates against their cited sources: **12 supported, 8 partial, 0 unsupported**.
+Three **Y** cells are overstated by their own sources — processkit B11 (kill after the root exited is not explicit),
+processkit-py B07 (no evidence that unread output is continuously drained with counted drops) and portable-pty B01
+(PATHEXT search exists, `.cmd` execution semantics do not). The 81.8% headline is therefore an upper bound; the measured
+fit (`processkit-fit.md`: 1 of 24 contract items as-is) is what the G0 used.
