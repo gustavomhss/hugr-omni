@@ -1,7 +1,7 @@
 # Host ↔ supervisor protocol (v1)
 
-Frozen in W00. Why and how it was proven: ADR-0005. Types: `crates/omni-proto`. Codec: W04. Supervisor: W05 (Unix),
-W06 (Windows).
+Frozen in W00. Why and how it was proven: ADR-0005. Types and codec: `crates/omni-proto` (W00). Host client: W04.
+Supervisor: W05 (Unix), W06 (Windows).
 
 **Start.** On its first spawn the host execs `hugr-omni-supervisor --host-pid <pid> [--pipe <name>]`. The binary is
 found via `HUGR_OMNI_SUPERVISOR`, then next to the native module, then next to the current executable.

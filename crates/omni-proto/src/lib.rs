@@ -1,6 +1,6 @@
 //! Messages between the hugr-omni host and `hugr-omni-supervisor` (`docs/protocol.md`, ADR-0005).
 //!
-//! The message types are frozen in W00; the byte layout is `docs/protocol.md`; the codec is W04's.
+//! Frozen in W00: the message types and the codec, which is the byte layout of `docs/protocol.md`.
 //! Strings that come from the OS (argv, env, paths) travel as bytes: raw on Unix, WTF-8 on Windows.
 
 mod codec;

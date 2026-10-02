@@ -427,7 +427,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** cache de resolução; expansão de variáveis.
 
 #### W04 · Canal e cliente do supervisor (lado host)
-- **Agente:** Opus · **Depende:** W00 · **Escreve:** `crates/omni-proto/src/codec/**`, `crates/hugr-omni/src/client/**`
+- **Agente:** Opus · **Depende:** W00 · **Escreve:** `crates/hugr-omni/src/client/**` (o codec já vem pronto e testado do W00)
 - **Objetivo:** o host fala com o supervisor de forma segura sob concorrência, falha e reinício.
 - **Completude:** PROTO-01 (suíte do canal: frames parciais, enxurrada de pedidos, par travado, vários waiters de `Stop`, reinício por geração, cliente herdado por fork recusado, bootstrap do Windows sem handle herdável).
 - **Sucesso:** matar o supervisor no meio de 10 operações concorrentes faz todas falharem com `IO`, e o próximo spawn funciona.
@@ -437,7 +437,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** lógica de processo (isso fica no supervisor e no `process/`).
 
 #### W05 · Supervisor Unix
-- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/unix/**`
+- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/unix/**`, `crates/omni-supervisor/tests/unix*.rs` (+ helpers em `tests/common/`)
 - **Objetivo:** criar, conter, parar e colher processos no Linux e no macOS, sem nunca atingir um processo errado.
 - **Completude:** SUP-U (suíte do supervisor no Linux, macOS e Linux musl: spawn por `posix_spawn` com `SETSID` e só os fds de stdio; `Stop` com prazo único sobre a sessão; pin até a sessão esvaziar; inventário que distingue incompleto de vazio e responde `List` com o que o `Stop` alcançaria; fallback sem pidfd; morte do host de 7 formas, inclusive no meio do spawn; sentinela de reuso de PID; `Release` com descendentes resistentes em outros grupos, mais um controle só-grupo).
 - **Sucesso:** `stop()` nunca deixa sobrevivente na sessão e nunca toca em processo alheio.
@@ -447,7 +447,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** PTY (é do W12); I/O de saída (fica no host).
 
 #### W06 · Supervisor Windows
-- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/windows/**`
+- **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/windows/**`, `crates/omni-supervisor/tests/windows*.rs`
 - **Objetivo:** o filho nasce dentro do Job, a linha de comando é segura, e o Ctrl-Break sai do console do supervisor, nunca do host.
 - **Completude:** SUP-W (suíte do supervisor no Windows 11 e no Server 2022: `CreateProcessW` + `JOB_LIST`; quoting igual ao do std, com testes diferenciais contra o `std::process`; `.cmd`/`.bat` seguros ou recusados; CTRL_BREAK gracioso e forçado via Job; `List` a partir dos membros do Job; morte do host; supervisor morto mata as árvores), C-SPAWN-02.
 - **Sucesso:** argumentos chegam idênticos, `.bat` nunca vira injeção, e o estado de console do host não muda.
@@ -778,6 +778,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - o item de DoD do relay hook (`move-in`) saiu: o `AGENTS.md` já é a memória do repo;
   - ficaram de propósito os arquivos de 1 linha `process/deadline.rs` e `error/messages.rs`: evitam que o W09 e o W03 editem um `mod.rs` de outro dono.
   - hash do contrato congelado (sha256, 16 primeiros): `86907cb5b71d790a`.
+  - o **codec** do protocolo saiu do W04 e foi feito no W00: W04, W05 e W06 precisam dele em paralelo, e ele é o contrato byte a byte (4 testes com probe de motivo: ida e volta de cada mensagem, frames parciais, 10 frames malformados, `encode` recusa o que o `decode` recusaria); `client::runtime()` entrou no seam (o runtime tokio próprio do ADR-0004 tem um dono só); os testes do supervisor ficam em `crates/omni-supervisor/tests/` (W05: `unix*`, `common/`; W06: `windows*`).
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.

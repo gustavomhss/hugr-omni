@@ -91,7 +91,7 @@ Sandbox (phases 2–3):
 | SCF-01 | Scaffold compiles on 3 OS; stubs return errors, never panic | W00 |
 | ARC-FS | God-file guard: no tracked code file over 650 lines (`scripts/file-size-guard.py`, teeth in `scripts/test_file_size_guard.py`); wired into CI by W00 and run on every bundle | W00 |
 | FIX-01 | Fixture implements FIXTURE.md on 3 OS | W01 |
-| ACC-01 | Every contract item has a red scenario + supervisor/`pty` seam suites | W01 |
+| ACC-01 | Every contract item has a red scenario (the seam suites PROTO-01, SUP-U/W, PTYSYS-U/W belong to W04/W05/W06/W12/W12w) | W01 |
 | ACC-02 | TS and Python runners execute the same scenarios; idiom tests for C-TS-01 / C-PY-01 | W02 |
 | PROTO-01 | Host↔supervisor channel suite (ADR-0005 R1, R2, R6, R7) | W04 |
 | SUP-U / SUP-W | Supervisor suites on Unix (incl. static musl) / Windows (ADR-0005 R3–R5, R8, R10) | W05 / W06 |

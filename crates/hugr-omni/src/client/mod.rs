@@ -2,7 +2,7 @@
 //! restart by generation after supervisor death, creator-pid check, non-blocking bounded channel,
 //! pipe creation and descriptor transfer. W04.
 //!
-//! SEAM (frozen in W00): `spawn`, `Spawned`, `HostStdio`, `Pipe`, `Tree` and its methods.
+//! SEAM (frozen in W00): `runtime`, `spawn`, `Spawned`, `HostStdio`, `Pipe`, `Tree` and its methods.
 //! Bodies and private items belong to W04. Every failure of the supervisor or the channel is `Io`;
 //! after one, every pending call of that generation fails and the next `spawn` starts a new supervisor.
 
@@ -39,6 +39,13 @@ pub(crate) struct Spawned {
     pub tree: Tree,
     pub pid: u32,
     pub stdio: HostStdio,
+}
+
+/// The library's own tokio runtime (ADR-0004), started lazily and never the caller's: every background task
+/// of the library (channel reader, output pumps, deadlines) runs here, so it works under Node, Python, a
+/// user's tokio runtime or none. Built without tokio's process and signal features (INV-16).
+pub(crate) fn runtime() -> Result<&'static tokio::runtime::Runtime, Error> {
+    Err(todo())
 }
 
 /// Starts `spec` through the supervisor (starting the supervisor first if needed). Blocks the calling
