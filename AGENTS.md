@@ -47,7 +47,7 @@ by a lead decision. Their bodies and every private item belong to the module's o
 - **Never observe child exit through tokio's process/SIGCHLD machinery** (INV-16). `tokio::process` is banned.
 - **No `unwrap`/`expect`/`panic` in library or supervisor code** (clippy denies it). Nothing may panic across FFI.
 - **`unsafe` only in `client`, `pty`, `spawn/sys.rs` (the effective execute-permission check), the supervisor,
-  `omni-fixture/src/sys` and the bindings,** each block with a `// SAFETY:` comment.
+  `omni-fixture/src/sys`, the bindings, and the test runners' one `std::env::set_var` at startup (before any thread),** each block with a `// SAFETY:` comment.
 - **Never block the host:** not the Node main thread, not the tokio executor. The one exception is spawning,
   which blocks for bounded round trips, like `std::process::Command::spawn`: one for a pipe child, two for a Unix
   PTY child (`client::spawn`, then `Tree::go`).
@@ -73,8 +73,12 @@ python3 scripts/file-size-guard.py
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+cargo build --workspace --bins
 cargo test --workspace
 ```
+
+`cargo test` alone never builds another package's binaries (`omni-fixture`, `hugr-omni-supervisor`); the contract
+runner fails loudly without them.
 
 **Linux, in Docker** (any Docker host; the target dir is a volume, not your worktree):
 

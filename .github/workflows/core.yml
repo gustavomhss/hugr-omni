@@ -44,6 +44,7 @@ jobs:
       - name: supervisor suite against the static musl binary
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          cargo build --workspace --bins
           HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" \
             cargo test -p omni-supervisor --no-fail-fast
       - name: TypeScript surface and quickstart type-check
@@ -64,7 +65,10 @@ jobs:
       - name: allow unprivileged user namespaces (the PID-reuse test steers ns_last_pid in its own namespace)
         if: runner.os == 'Linux'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: cargo build --workspace --bins
       - run: cargo test --workspace --no-fail-fast
       - name: K4 spawn round trip, release build (Linux is the K4 reference)
         if: runner.os == 'Linux'
-        run: cargo test --release -p hugr-omni --no-fail-fast -- k4
+        run: |
+          cargo build --release --workspace --bins
+          cargo test --release -p hugr-omni --no-fail-fast -- k4

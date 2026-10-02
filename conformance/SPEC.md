@@ -66,7 +66,8 @@ collects one value per matching line.
 
 Settled while writing the first runner; every runner follows them:
 - `write` without `data` only closes stdin;
-- in lines mode, the `stdout`/`stderr`/`pty` text of a `read` is each line followed by `\n`;
+- in lines mode, the `stdout`/`stderr`/`pty` text of a `read` is each line followed by `\n`, except a piece marked
+  `continues`;
 - a `read` after `detach`, or in the other mode, makes a new claim, which the contract refuses with
   `INVALID_ARGUMENT` (so a scenario can expect that error);
 - a `read` consumes whole chunks.
