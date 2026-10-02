@@ -50,7 +50,8 @@ pub(crate) fn runtime() -> Result<&'static tokio::runtime::Runtime, Error> {
 
 /// Starts `spec` through the supervisor (starting the supervisor first if needed). Blocks the calling
 /// thread for one round trip (like `std::process::Command::spawn`), bounded: a stalled supervisor yields
-/// `Io`, never a hang. Startup failures map to `NotFound` / `NotExecutable` / `InvalidCwd` / `Io`.
+/// `Io`, never a hang. Startup failures map to `NotFound` / `NotExecutable` / `InvalidCwd` / `InvalidArgument` (an
+/// argument that cannot be passed safely, e.g. to a batch file) / `Io`.
 /// A Unix PTY root is held before exec until `Tree::go`: the caller starts its reader on the terminal
 /// output first, then calls `go`, so `spawn_pty()` still reports exec failures synchronously.
 pub(crate) fn spawn(spec: &Spec) -> Result<Spawned, Error> {

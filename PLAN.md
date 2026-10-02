@@ -764,6 +764,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - as mensagens de `NOT_FOUND` mostram o valor do PATH e do PATHEXT pesquisados: é o valor que falhou e o usuário precisa dele para consertar (UX-D). Argumentos e os outros valores de env nunca aparecem;
   - novo seam `binding` (oculto da doc, do W03) com as regras de número que só TS e Python conseguem violar (NaN, negativo, fração), para o texto do erro ser o mesmo em toda linguagem;
   - `error/messages.rs` vira compartilhado e só recebe acréscimos: cada WP adiciona o próprio bloco `impl Error`.
+- 2026-10-02 · Lead, entrega do W04: aprovado o feature `Win32_System_LibraryLoader` do `windows-sys` para achar o supervisor ao lado do módulo nativo no Windows (é como o pacote npm o distribui); `FailCode::Invalid` vira `INVALID_ARGUMENT`; o K4 em release é medido como max(0,2 ms, 3× um ping-pong de socketpair na mesma execução), só em release, e a prova oficial do K4 continua no QA (Q1).
 - 2026-10-02 · Lead, rodada 2 do W03:
   - "executável" no Unix passa a ser o acesso efetivo (`faccessat(X_OK, AT_EACCESS)`, a mesma regra do kernel): um arquivo `0645` do próprio usuário não pode bloquear um candidato válido mais adiante no PATH. É um `unsafe` permitido só em `spawn/sys.rs`;
   - chaves de env no Windows são comparadas por ordinal sem caixa sobre o UTF-16 inteiro, incluindo surrogates soltos, como o Windows faz;
