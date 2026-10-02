@@ -10,8 +10,8 @@ C-HOST-01) are written per language beside the runner, not here.
   "id": "C-PROC-01.tree",
   "steps": [
     { "spawn": ["${FIXTURE}", "tree=2", "read-line", "exit=0"], "options": { "stdin": "pipe" }, "as": "c" },
-    { "read": "c", "until": { "match": "PID 2 ", "count": 1 },
-      "capture": { "p1": "PID 1 (\\d+)", "p2": "PID 2 (\\d+)" } },
+    { "read": "c", "until": { "match": "^PID [12] \\d+$", "count": 2 },
+      "capture": { "p1": "^PID 1 (\\d+)$", "p2": "^PID 2 (\\d+)$" } },
     { "processes": "c", "expect": { "entries": [
         { "pid": "${c.pid}", "parentPid": null, "name": { "regex": "^omni-fixture" } },
         { "pid": "${p1}", "parentPid": "${c.pid}", "name": { "regex": "^omni-fixture" } },
@@ -56,6 +56,10 @@ failure, never a pass.
 | `resize` | `resize(cols, rows)` | `cols`, `rows`, `expect` |
 | `processes` | `processes()` | `capture` (the pids), `expect` |
 | `os` | asks the OS (never the library) that every pid in `pids` is `alive` or `dead` (gone or a zombie) | `pids` (a capture or a list), `withinMs` (poll until true or fail) |
+
+`until.match` and `capture` regexes are applied to **complete lines** (without the line end), assembled by the runner
+in both chunk and line mode, so a marker split across chunks is never matched or captured half-way. A capture
+collects one value per matching line.
 
 `options` uses the TS names of `docs/api-contract.md` (`cwd`, `env`, `inheritEnv`, `timeoutMs`, `graceMs`, `text`,
 `mergeStderr`, `input`, `maxOutputBytes`, `stdin`, `pty`); each runner maps them to its language.

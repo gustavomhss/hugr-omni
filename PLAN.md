@@ -644,7 +644,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
 | S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
-| W00 | **em revisão (Codex)** | `bundle/B1` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
+| W00 | **aprovado (lead, após 3 rodadas do Codex)** | `bundle/B1` → PR para `main` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
@@ -779,6 +779,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - ficaram de propósito os arquivos de 1 linha `process/deadline.rs` e `error/messages.rs`: evitam que o W09 e o W03 editem um `mod.rs` de outro dono.
   - hash do contrato congelado (sha256, 16 primeiros): `86907cb5b71d790a`.
   - rodada 2 do Codex: o exemplo do SPEC segura a raiz com `read-line` até o inventário e confere cada elo pai→filho; o slot `null` é o dispositivo nulo aberto para leitura (no Windows `NUL`, nunca um handle nulo); `Ack::Gone` removido (valor 1 reservado); a seção de árvores do protocolo remete ao ADR. `Data` mantém `Display` por ergonomia; os stubs privados do `spawn` ficam com o W03, que é o dono;
+  - rodada 3 do Codex: codec, `runtime()` e a emenda do card passaram; o último P1 (o `until` podia parar no meio de uma linha) foi corrigido: `until` e `capture` valem só sobre linhas completas, e cada marcador do fixture sai numa única escrita. **W00 aprovado pelo lead.**
   - o **codec** do protocolo saiu do W04 e foi feito no W00: W04, W05 e W06 precisam dele em paralelo, e ele é o contrato byte a byte (4 testes com probe de motivo: ida e volta de cada mensagem, frames parciais, 10 frames malformados, `encode` recusa o que o `decode` recusaria); `client::runtime()` entrou no seam (o runtime tokio próprio do ADR-0004 tem um dono só); os testes do supervisor ficam em `crates/omni-supervisor/tests/` (W05: `unix*`, `common/`; W06: `windows*`).
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.

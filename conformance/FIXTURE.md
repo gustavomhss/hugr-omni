@@ -1,7 +1,8 @@
 # omni-fixture
 
 The test program of the contract scenarios and the QA harness (`crates/omni-fixture`, W01). It behaves the same
-on every OS, prints only ASCII markers, and never sleeps to synchronize: scenarios wait for its markers.
+on every OS, prints only ASCII markers, and never sleeps to synchronize: scenarios wait for its markers. Every marker
+line is written with a single write call, so lines from different fixture processes sharing a pipe never interleave.
 
 ```text
 omni-fixture <step> [<step> ...]
