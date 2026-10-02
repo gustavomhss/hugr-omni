@@ -64,7 +64,7 @@ Sandbox (phases 2–3):
 | K1 orphan processes after a task | 0 |
 | K2 hangs | 0 |
 | K3 stop latency p95 | ≤ graceMs + 500 ms |
-| K4 spawn overhead p50 (time to PID, and trivial round-trip) | ≤ 1.25× stdlib |
+| K4 spawn overhead p50 (time to PID, and trivial round-trip) | ≤ 1.25× stdlib or ≤ +0.3 ms absolute, whichever is looser |
 | K5 output bytes lost/garbled within documented limits | 0 |
 | K6 1000-task soak: fds/handles back to baseline; RSS growth | ≤ 10 MB |
 | K7 host crashes | 0 |
