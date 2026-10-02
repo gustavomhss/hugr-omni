@@ -645,6 +645,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
 | S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
 | W00 | **concluído · na `main`** (PR #2, CI verde nos 3 OS + musl) | `main` `ee40167` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
+| W03 | **no `bundle/B2`** (Codex: aprovado na rodada 3; probe do PATHEXT vermelho) | `75e8e90` | C-SPAWN-01/03, C-ENV-01, C-ERR-01/02 provados por 22 testes unitários; ponta a ponta com o B2 |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
