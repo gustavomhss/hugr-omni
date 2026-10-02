@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B)** · contrato congelado (D5) · W00 na `main` · primeira onda (W01, W03–W06) integrada no `bundle/B2`, PR aberto · 2026-10-02
+> Status: **G0 assinado (B)** · contrato congelado (D5) · primeira onda (W00, W01, W03–W06) na `main` (PR #4) · segunda onda (W02, W07, W10, W12w) no `bundle/B3` · 2026-10-02
 > Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -774,6 +774,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - **registro de pendências** `conformance/pending.txt`: um item pendente que falha conta como `pending`, e um que passa falha o CI até sair do registro. Só o lead edita, e ele tem que estar vazio no release;
   - o `unsafe` do fixture fica restrito a `omni-fixture/src/sys`;
   - as 4 ambiguidades do SPEC que o primeiro runner resolveu viraram regra no SPEC.
+- 2026-10-02 · Lead, V1 da segunda onda: o B2 entrou na `main` pelo PR #4, depois do CI completo (3 OS, suíte do supervisor no musl, K4 em release no Linux). O seam interno do `io` foi congelado (`Pumps`, `Source`, `Collected`, `Stdin`) para W10 e W07 andarem em paralelo. A divisão W07/W09 dentro de `process/` é sequencial: o W07 expõe ao W09 um gancho interno para encerrar com causa (`Reason`) e prazo. Os seams do `pty` (lado host) congelam no V1 do W12, depois do W10.
 - 2026-10-02 · Lead, rodada 5 do W05: no macOS (sem id de sessão para processos saindo), um descendente fora do grupo da raiz, órfão antes da primeira varredura e já em teardown do kernel, pode ainda estar terminando quando o `Stopped` sai. Fica como limitação declarada, porque ele não roda mais código de usuário. A alternativa, bloquear a confirmação enquanto houver qualquer processo saindo que não dá para atribuir, arrisca travar a confirmação em máquina carregada (K3), o que é pior.
 - 2026-10-02 · Lead, rodada 3 do W04: o pidfd do supervisor é aberto logo depois do spawn. A janela em que ele poderia apontar para outro processo exige o PID dar a volta no espaço inteiro em microssegundos, porque a alocação é sequencial. Sem mudar o protocolo, basta confirmar depois que o processo é filho do host (ppid == pid do host) e, se não for, nunca sinalizar. A janela residual de checagem até o sinal no macOS está declarada no GUARANTEES.
 - 2026-10-02 · Lead: o GitHub não tem runner de Windows 11; o `windows-latest` (Server 2025, build 26100, o mesmo build do Windows 11 24H2) vale como Windows 11 nos cards. A regra "o supervisor tem uma thread só" passa a ser: uma thread de controle, mais uma thread que só escreve diagnósticos no stderr (existe nos dois OS para que um stderr cheio ou fechado nunca trave os prazos).
