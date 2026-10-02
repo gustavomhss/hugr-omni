@@ -46,7 +46,8 @@ by a lead decision. Their bodies and every private item belong to the module's o
   lives in the supervisor.
 - **Never observe child exit through tokio's process/SIGCHLD machinery** (INV-16). `tokio::process` is banned.
 - **No `unwrap`/`expect`/`panic` in library or supervisor code** (clippy denies it). Nothing may panic across FFI.
-- **`unsafe` only in `client`, `pty`, the supervisor and the bindings,** each block with a `// SAFETY:` comment.
+- **`unsafe` only in `client`, `pty`, `spawn/sys.rs` (the effective execute-permission check), the supervisor and the
+  bindings,** each block with a `// SAFETY:` comment.
 - **Never block the host:** not the Node main thread, not the tokio executor. The one exception is spawning,
   which blocks for bounded round trips, like `std::process::Command::spawn`: one for a pipe child, two for a Unix
   PTY child (`client::spawn`, then `Tree::go`).

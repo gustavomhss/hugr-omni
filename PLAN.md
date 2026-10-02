@@ -763,6 +763,10 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - as mensagens de `NOT_FOUND` mostram o valor do PATH e do PATHEXT pesquisados: é o valor que falhou e o usuário precisa dele para consertar (UX-D). Argumentos e os outros valores de env nunca aparecem;
   - novo seam `binding` (oculto da doc, do W03) com as regras de número que só TS e Python conseguem violar (NaN, negativo, fração), para o texto do erro ser o mesmo em toda linguagem;
   - `error/messages.rs` vira compartilhado e só recebe acréscimos: cada WP adiciona o próprio bloco `impl Error`.
+- 2026-10-02 · Lead, rodada 2 do W03:
+  - "executável" no Unix passa a ser o acesso efetivo (`faccessat(X_OK, AT_EACCESS)`, a mesma regra do kernel): um arquivo `0645` do próprio usuário não pode bloquear um candidato válido mais adiante no PATH. É um `unsafe` permitido só em `spawn/sys.rs`;
+  - chaves de env no Windows são comparadas por ordinal sem caixa sobre o UTF-16 inteiro, incluindo surrogates soltos, como o Windows faz;
+  - `NotADirectory` durante a busca conta como ausente (semântica do `execvp`).
 - 2026-10-02 · Stakeholder pediu ver "cada processo" de um comando; lead aprovou **`processes()`** no contrato v0.1 (C-PROC-01, dono W07; inventário no W05/W06). Motivo: o supervisor já mantém esse inventário para o `stop()`, e a dor nº 1 de "por que meu comando não termina?" é um neto segurando a saída. Regra: lista exatamente o que o `stop()` alcançaria (mesma regra, nunca promete mais); só pid, pai e nome do executável (argumentos ficam fora, por segredo e custo no Windows); `IO` se o inventário vier incompleto. Ficaram fora: etiqueta de agente/sessão (o app já sabe) e painel da máquina inteira (outro produto). O glossário continua com 15 conceitos (`processes` faz parte do Child).
 - 2026-10-02 · Lead, W00:
   - protocolo v1 congelado em `docs/protocol.md`. Sem a mensagem `Signal` do S5, porque nenhuma promessa precisa de sinal sem prazo; o kill forçado é `Stop{grace_ms: 0}`. Entram `List`/`Processes`; o `Spawn` passou a levar o `program` resolvido e o `grace_ms` da árvore, usado na morte do host;
