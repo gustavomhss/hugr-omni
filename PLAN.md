@@ -646,6 +646,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
 | W00 | **concluído · na `main`** (PR #2, CI verde nos 3 OS + musl) | `main` `ee40167` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
 | W03 | **no `bundle/B2`** (Codex: aprovado na rodada 3; probe do PATHEXT vermelho) | `75e8e90` | C-SPAWN-01/03, C-ENV-01, C-ERR-01/02 provados por 22 testes unitários; ponta a ponta com o B2 |
+| W06 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe do quoting vermelho no Windows) | `031eb1b` | SUP-W + C-SPAWN-02 verdes em Server 2025 (26100) e 2022 (20348) |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
@@ -770,6 +771,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - **registro de pendências** `conformance/pending.txt`: um item pendente que falha conta como `pending`, e um que passa falha o CI até sair do registro. Só o lead edita, e ele tem que estar vazio no release;
   - o `unsafe` do fixture fica restrito a `omni-fixture/src/sys`;
   - as 4 ambiguidades do SPEC que o primeiro runner resolveu viraram regra no SPEC.
+- 2026-10-02 · Lead: o GitHub não tem runner de Windows 11; o `windows-latest` (Server 2025, build 26100, o mesmo build do Windows 11 24H2) vale como Windows 11 nos cards. A regra "o supervisor tem uma thread só" passa a ser: uma thread de controle, mais uma thread que só escreve diagnósticos no stderr (existe nos dois OS para que um stderr cheio ou fechado nunca trave os prazos).
 - 2026-10-02 · Lead, revisão do W01 (emenda do card): o "runner Rust com ≤ ~300 linhas" era estimativa. O DSL de 10 ações, mais o oráculo do OS, o registro de pendências e a guarda de regex, precisa de ~1250 linhas em 8 arquivos, cada um abaixo de 300. Aceito, sem crescer além dos consertos da revisão.
 - 2026-10-02 · Lead, rodada 2 do W05:
   - "revezamento" adversário (fork e saída mais rápidos que a varredura, sempre no intervalo exato) fica como limitação declarada no GUARANTEES, sem código novo. Não dá capacidade nova a um adversário, que já escapa mais fácil com `setsid` (declarado). O modelo de ameaça do exec é programa comum ou com bug; conter código hostil é o trabalho da sandbox;
