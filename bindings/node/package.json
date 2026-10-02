@@ -1,0 +1,10 @@
+{
+  "name": "hugr-omni",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Run processes and terminals with identical, tested behavior on Windows, macOS and Linux.",
+  "license": "MIT OR Apache-2.0",
+  "repository": "github:gmhelmold/hugr-omni",
+  "types": "index.d.ts",
+  "engines": { "node": ">=22" }
+}

@@ -1,7 +1,8 @@
 # hugr-omni — API contract (v0.1: TypeScript)
 
-Status: **FROZEN for v0.1** (2026-10-02, tech lead; Codex review: rework → rework → freeze_after_fixes, fixes applied) · Owner of this document: the tech lead · v0.2 adds Python and Rust with the
-same semantics (mapping at the end). Every rule below is a promise; the conformance scenarios and
+Status: **FROZEN for v0.1** (2026-10-02, tech lead; Codex review: rework → rework → freeze_after_fixes, fixes applied;
+amended in W00: `processes()`, Rust mapping aligned with the core crate) · Owner of this document: the tech lead · v0.2
+adds Python and Rust with the same semantics (mapping at the end). Every rule below is a promise; the conformance scenarios and
 `GUARANTEES.md` hold the per-OS evidence.
 
 ## 1. Surface
@@ -41,12 +42,14 @@ interface Child extends AsyncDisposable {       // what pipe and PTY children sh
   write(data: string | Uint8Array): Promise<void>;
   wait(): Promise<Exit>;                        // root process exited (see §5)
   stop(options?: { graceMs?: number }): Promise<Exit>;         // whole tree gone (see §5)
+  processes(): Promise<ProcessInfo[]>;          // live processes stop() would end now (see §5)
 }
 interface PipeChild extends Child { closeStdin(): Promise<void>; }
 interface PtyChild extends Child { resize(cols: number, rows: number): void; }
 
 interface Chunk { stream: "stdout" | "stderr" | "pty"; data: string | Uint8Array; lostBefore?: number; }
 interface Line  { stream: "stdout" | "stderr" | "pty"; text: string; lostBefore?: number; continues?: true; }
+interface ProcessInfo { pid: number; parentPid: number | null; name: string | null; }
 interface Exit {
   exitCode: number | null;                      // null only when a Unix process was ended by a signal
   signal: string | null;                        // Unix signal name; always null on Windows
@@ -68,7 +71,7 @@ class OmniError extends Error {
 
 run · spawn · cwd · environment (`env`, `inheritEnv`) · terminal (`pty`, `resize`) · timeout · grace ·
 cancellation · stdin (`input` for run; `stdin: "pipe"`, `write`, `closeStdin` for spawn) · output limit ·
-text vs bytes · output (`output`, `lines`, `mergeStderr`, `droppedBytes`) · Child (`pid`, `wait`, `stop`) ·
+text vs bytes · output (`output`, `lines`, `mergeStderr`, `droppedBytes`) · Child (`pid`, `wait`, `stop`, `processes`) ·
 Exit / RunResult · OmniError.
 
 ## 3. Starting a process
@@ -114,6 +117,13 @@ Exit / RunResult · OmniError.
   everything still alive. It also works after `wait()` resolved (it then ends the surviving descendants and
   keeps the root's recorded `Exit`). It resolves once the tree is confirmed gone (per tier), ends `output`,
   and returns the `Exit`; calling it again after that is a no-op returning the same `Exit`.
+- **`processes()`** is a snapshot of the live processes that `stop()` would end right now, by the same rule
+  (Unix: the root's session; Windows: the Job), so it never lists more or less than `stop()` reaches. Each entry has
+  `pid`, `parentPid` (the parent's pid when the parent is in the list, otherwise `null` — e.g. the root, or an orphan)
+  and `name` (the executable's file name without directory: `node` on Unix, `node.exe` on Windows; `null` when the
+  OS does not tell). Command-line arguments are never included (they often carry secrets). Order is unspecified.
+  Once the tree is gone it returns `[]`; if the OS inventory is incomplete it rejects with `IO` instead of returning
+  a partial list.
 - **Scope exit:** `await using` awaits `stop()`. (Python `with` calls `stop()`; Rust `drop` force-kills the
   tree immediately without blocking — use `stop().await` for a graceful end. See §10.)
 
@@ -188,8 +198,11 @@ Exit / RunResult · OmniError.
   `text=True`; `stdin="pipe"`; `merge_stderr`; `with`/`async with` call `stop()`. Errors: `OmniError` with
   `.code`, plus `CommandNotFoundError(OmniError, FileNotFoundError)`. Cancellation propagates natively
   (`CancelledError` / `KeyboardInterrupt`) after the tree is stopped.
-- **Rust:** `Command` builder with the same options; `spawn()` → `PipeChild` / `PtyChild`, `run().await` →
-  `Result<RunOutput, Error>`; `#[non_exhaustive] Error` with `code()`; cancellation via `cancel_on(token)` →
-  `Err(Error::Aborted { partial })`; `output()` and `output_text()` each claim the single consumer.
+- **Rust:** `Command` builder with the same options (`text(bool)`, `pty(PtySize)`, durations as `Duration`);
+  `spawn()` → `PipeChild`, `spawn_pty()` → `PtyChild` (both deref to `Child`), `run().await` → `Result<RunOutput, Error>`;
+  `Error` with `code()` (`ErrorCode`, `#[non_exhaustive]`) and `result()`; cancellation via `cancel_on(token)` →
+  `Err(e)` with `e.code() == ErrorCode::Aborted` and the partial output in `e.result()`; `output()` and `lines()` each
+  claim the single consumer; `processes().await` → `Vec<ProcessInfo>`. Python: `processes()` → `list[ProcessInfo]`
+  (`pid`, `parent_pid`, `name`).
   **`Drop` force-kills the tree immediately and does not block**; reaping runs on a dedicated thread, not on
   the tokio runtime, so it also works after the runtime shut down (INV-16).

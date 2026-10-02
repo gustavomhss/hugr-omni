@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API aguardando aprovação do Owner (D5) · 2026-10-01
+> Status: **G0 assinado (B: núcleo próprio, TS primeiro)** · contrato da API congelado (D5) · W00 (scaffold + seams) em revisão · 2026-10-02
 > Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -395,7 +395,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** implementar comportamento.
 
 #### W01 · Fixture + contrato (cenários + runner Rust)
-- **Agente:** Opus · **Revisor:** Codex (vacuidade) · **Depende:** W00 · **Escreve:** `crates/omni-fixture/**`, `conformance/scenarios/**`, `crates/hugr-omni/tests/**`
+- **Agente:** Opus · **Revisor:** Codex (vacuidade) · **Depende:** W00 · **Escreve:** `crates/omni-fixture/**`, `conformance/scenarios/**`, `conformance/FIXTURE.md` (só acrescenta verbos), `crates/hugr-omni/tests/**`
 - **Completude:** FIX-01 (os subcomandos do `FIXTURE.md`); ACC-01 (cada item do Apêndice A com um cenário vermelho, mais as suítes dos seams `sys`/`pty`).
 - **Sucesso:** a suíte mostra o produto inteiro "faltando", promessa por promessa, em ~35 cenários.
 - **Invariantes:** cada cenário falha pelo motivo certo; o fixture sincroniza por marcadores (`READY`); nenhum cenário além do Apêndice A.
@@ -413,7 +413,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** criar cenário.
 
 #### W03 · Resolução, ambiente e erros
-- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/spawn/{resolve,env,validate}.rs`, `crates/hugr-omni/src/error/messages.rs`
+- **Agente:** Opus · **Depende:** W01 · **Escreve:** `crates/hugr-omni/src/spawn/**` (os itens SEAM do `mod.rs` ficam congelados), `crates/hugr-omni/src/error/messages.rs`
 - **Completude:** C-SPAWN-01, C-SPAWN-03, C-ENV-01, C-ERR-01, C-ERR-02.
 - **Sucesso:** `run("npm", …)` funciona igual nos 3 OS, e cada erro diz como consertar.
 - **Invariantes:**
@@ -438,7 +438,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 #### W05 · Supervisor Unix
 - **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/unix/**`
 - **Objetivo:** criar, conter, parar e colher processos no Linux e no macOS, sem nunca atingir um processo errado.
-- **Completude:** SUP-U (suíte do supervisor no Linux, macOS e Linux musl: spawn por `posix_spawn` com `SETSID` e só os fds de stdio; `Stop` com prazo único sobre a sessão; pin até a sessão esvaziar; inventário que distingue incompleto de vazio; fallback sem pidfd; morte do host de 7 formas, inclusive no meio do spawn; sentinela de reuso de PID; `Release` com descendentes resistentes em outros grupos, mais um controle só-grupo).
+- **Completude:** SUP-U (suíte do supervisor no Linux, macOS e Linux musl: spawn por `posix_spawn` com `SETSID` e só os fds de stdio; `Stop` com prazo único sobre a sessão; pin até a sessão esvaziar; inventário que distingue incompleto de vazio e responde `List` com o que o `Stop` alcançaria; fallback sem pidfd; morte do host de 7 formas, inclusive no meio do spawn; sentinela de reuso de PID; `Release` com descendentes resistentes em outros grupos, mais um controle só-grupo).
 - **Sucesso:** `stop()` nunca deixa sobrevivente na sessão e nunca toca em processo alheio.
 - **Invariantes:** ADR-0005 R1, R3, R4, R5, R8, R10; o supervisor tem uma thread só; toda syscall é checada.
 - **Qualidade:** `// SAFETY:` em todo `unsafe`; stop-all com um inventário e um prazo compartilhados.
@@ -448,7 +448,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 #### W06 · Supervisor Windows
 - **Agente:** Opus · **Depende:** W00, W01 · **Escreve:** `crates/omni-supervisor/src/windows/**`
 - **Objetivo:** o filho nasce dentro do Job, a linha de comando é segura, e o Ctrl-Break sai do console do supervisor, nunca do host.
-- **Completude:** SUP-W (suíte do supervisor no Windows 11 e no Server 2022: `CreateProcessW` + `JOB_LIST`; quoting igual ao do std, com testes diferenciais contra o `std::process`; `.cmd`/`.bat` seguros ou recusados; CTRL_BREAK gracioso e forçado via Job; morte do host; supervisor morto mata as árvores), C-SPAWN-02.
+- **Completude:** SUP-W (suíte do supervisor no Windows 11 e no Server 2022: `CreateProcessW` + `JOB_LIST`; quoting igual ao do std, com testes diferenciais contra o `std::process`; `.cmd`/`.bat` seguros ou recusados; CTRL_BREAK gracioso e forçado via Job; `List` a partir dos membros do Job; morte do host; supervisor morto mata as árvores), C-SPAWN-02.
 - **Sucesso:** argumentos chegam idênticos, `.bat` nunca vira injeção, e o estado de console do host não muda.
 - **Invariantes:** ADR-0005 R1, R5, R7; nunca usar breakaway; handles fechados em todos os caminhos.
 - **Qualidade:** o quoting cita o commit do std de onde foi portado, e o diferencial roda no CI.
@@ -456,8 +456,8 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** ConPTY (é do W12w).
 
 #### W07 · Child: kill de árvore e saída
-- **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{child,exit}.rs`
-- **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-SCOPE-01.
+- **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{mod,child,exit}.rs`
+- **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-PROC-01, C-SCOPE-01.
 - **Sucesso:** depois de `stop()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
 - **Invariantes:** `kill` idempotente; `drop` não bloqueia; `wait` tem uma fonte única de verdade; `Exit` vem de uma função pura.
 - **Qualidade:** zero `cfg`; a precedência de `reason` documentada no código.
@@ -474,7 +474,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** instalar handler de sinal ou hook de saída no host (ADR-0005 §9).
 
 #### W10 · IO + `run()`
-- **Agente:** Opus · **Depende:** W01 (o `run` integra com W07) · **Escreve:** `crates/hugr-omni/src/io/{out,decode,stdin,collect}.rs`
+- **Agente:** Opus · **Depende:** W01 (o `run` integra com W07) · **Escreve:** `crates/hugr-omni/src/io/**`
 - **Completude:** C-IO-01, C-IO-02, C-IO-03, C-IO-04, C-RUN-01.
 - **Sucesso:** ler só o começo da saída de um dev server não o congela; `run()` resolve o caso de 80% numa linha.
 - **Invariantes:**
@@ -507,7 +507,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** Unix.
 
 #### W13 · Binding Node/Bun/Deno
-- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/node/{src,lib}/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/node/index.js`
+- **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/node/{src,lib}/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/node/{index.js,Cargo.toml,build.rs}`, a linha `members` do `Cargo.toml` da raiz
 - **Completude:** C-TS-01 (idiomas e host TS), C-TS-02 (todos os cenários via TS em Node 22/24, Bun e Deno).
 - **Sucesso:** os quickstarts TS da seção 3 rodam como estão escritos, nos 3 runtimes.
 - **Invariantes:** zero lógica de processo em JS; o GC nunca mata o filho; hook de saída do host conforme o ADR-0002.
@@ -643,7 +643,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
 | S5 | concluído · revisado | `spike/supervisor` · ADR-0005 **aceito** | 9/10 testes com asserção nos 4 alvos; T9 resolvido por `posix_spawn` + novo K4 |
-| W00 | **em andamento (lead)** | `bundle/B1` | scaffold + seams congelados (API, protocolo, supervisor) |
+| W00 | **em revisão (Codex)** | `bundle/B1` | workspace de 4 crates compilando (macOS, Windows clippy, Linux); seams congelados: API, protocolo v1, spawn/client, supervisor; `processes()` entrou no contrato |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
@@ -757,6 +757,14 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 
 ## Apêndice E · Registro de decisões
 
+- 2026-10-02 · Stakeholder pediu ver "cada processo" de um comando; lead aprovou **`processes()`** no contrato v0.1 (C-PROC-01, dono W07; inventário no W05/W06). Motivo: o supervisor já mantém esse inventário para o `stop()`, e a dor nº 1 de "por que meu comando não termina?" é um neto segurando a saída. Regra: lista exatamente o que o `stop()` alcançaria (mesma regra, nunca promete mais); só pid, pai e nome do executável (argumentos ficam fora, por segredo e custo no Windows); `IO` se o inventário vier incompleto. Ficaram fora: etiqueta de agente/sessão (o app já sabe) e painel da máquina inteira (outro produto). O glossário continua com 15 conceitos (`processes` faz parte do Child).
+- 2026-10-02 · Lead, W00:
+  - protocolo v1 congelado em `docs/protocol.md`. Sem a mensagem `Signal` do S5, porque nenhuma promessa precisa de sinal sem prazo; o kill forçado é `Stop{grace_ms: 0}`. Entram `List`/`Processes`; o `Spawn` passou a levar o `program` resolvido e o `grace_ms` da árvore, usado na morte do host;
+  - API Rust do núcleo espelha o TS: `Command` no estilo `std`, `spawn()`/`spawn_pty()`, `Data` texto|bytes conforme `text()`, `Error` com `code()` e `result()`. A seção §11 do contrato foi alinhada;
+  - os seams internos de `io`, `process` e `pty` ficam só nos tipos públicos; o resto é congelado pelo lead no V1 de cada WP, porque congelar agora seria design especulativo;
+  - `bindings/node` entra no workspace no W13;
+  - toolchain fixado em 1.98.0;
+  - hash do contrato (sha256, 16 primeiros): `3b8acf717f430682`.
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.

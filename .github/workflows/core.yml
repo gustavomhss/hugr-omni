@@ -1,0 +1,58 @@
+# Fast CI: runs only for non-draft PRs to main, pushes to main and by hand (wp/* and bundle/* never run CI).
+name: core
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: core-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: god-file guard (+ its teeth)
+        run: python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
+      - name: plan cards complete
+        run: python3 scripts/plan-sections-check.py
+      - run: rustup toolchain install && rustup target add x86_64-pc-windows-msvc x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: clippy for Windows
+        run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+      - name: static musl supervisor
+        run: |
+          cargo build --release -p omni-supervisor --target x86_64-unknown-linux-musl
+          f=target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor
+          file "$f"
+          if readelf -l "$f" | grep -q INTERP; then echo "::error::supervisor is dynamically linked"; exit 1; fi
+      - name: TypeScript surface and quickstart type-check
+        working-directory: bindings/node
+        run: npx -y -p typescript@5 tsc -p tsconfig.json
+
+  test:
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace

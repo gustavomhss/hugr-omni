@@ -7,7 +7,7 @@ scenarios and run through every language. The **KPIs** (K*) are measured by usin
 "3 OS" = Windows, macOS, Linux. "5 targets" = win-x64, darwin-arm64, darwin-x64, linux-x64, linux-arm64.
 Owner = the work package that turns the item green. Contract tests are read-only for implementers. The API they exercise is frozen in `docs/api-contract.md`.
 
-## Contract (35)
+## Contract (36)
 
 | ID | Promise | Owner |
 |---|---|---|
@@ -26,6 +26,7 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-KILL-02 | `stop()` asks gracefully first with one deadline for the whole tree; a cooperative child finishes cleanup; one that ignores it is forced after `graceMs` (per-OS tier in GUARANTEES) | W07 |
 | C-KILL-03 | A descendant that deliberately escapes (setsid / job breakaway) behaves exactly as GUARANTEES declares per OS | W07 |
 | C-EXIT-01 | Exit codes 0/1/42/255 and Windows codes > 255 (e.g. `0xC000013A`) are reported as the same non-negative integer in all languages; `reason` is `exit`/`signal`/`killed`/`timeout`/`aborted` with the documented precedence | W07 |
+| C-PROC-01 | `processes()` lists exactly the live processes `stop()` would end: a 3-level fixture tree appears with correct `parentPid` links and names (root's `parentPid` null), descendants stay listed after the root exits, a Unix descendant that escaped via `setsid` is alive and not listed; after `stop()` it returns `[]` and every listed pid is dead per the OS; no argument text appears | W07 |
 | C-SCOPE-01 | Leaving scope kills the tree: TS `await using`, Python `with`/`async with`, Rust drop | W07 |
 | C-TMO-01 | `timeout` kills the whole tree, reason `timeout`, returns within timeout + grace + 1 s | W09 |
 | C-TMO-02 | Cancellation (AbortSignal / task cancel / KeyboardInterrupt / CancellationToken) kills the tree, reason `aborted`; an already-cancelled request runs nothing (`ABORTED`) | W09 |
