@@ -53,7 +53,7 @@ Sandbox (phases 2–3):
 |---|---|---|
 | C-SBX-01 | The policy (fs read/write allowlists + network on/off) is accepted by spawn/run in all 3 languages; invalid policy → `INVALID_ARGUMENT` before launch; unenforceable → `SANDBOX_UNAVAILABLE`, nothing runs; works with PTY; every sandbox scenario passes through Rust, TS and Python | SB1 |
 | C-SBX-02 | macOS via Seatbelt: denied writes/reads/network fail, allowed ones work, descendants included | SB2 |
-| C-SBX-03 | Linux via the ADR-0005 mechanisms: same as C-SBX-02 | SB3 |
+| C-SBX-03 | Linux via the ADR-0006 mechanisms: same as C-SBX-02 | SB3 |
 | C-SBX-04 | An independent escape suite (symlinks/hardlinks, /proc & fd inheritance, re-exec, loader env, IPv6/UNIX sockets/DNS) is fully blocked on macOS/Linux | SB4 |
 | C-SBX-05 | Windows via AppContainer/restricted token: exactly the declared tier holds, each row tested | SB6 |
 
@@ -81,6 +81,7 @@ Sandbox (phases 2–3):
 | G0-01 | Landscape: 22 behaviors × candidates with links; verdict on ≥ 80% — judged | R1 |
 | G0-02 | Pain: issues across ≥ 8 agents in TS/Python/Rust, reproducible counts — judged | R2 |
 | G0-03a/b/c | Spike ADRs (process + host exit · PTY · packaging) answering their listed questions with CI links on 3 OS — judged | S1 / S2 / S3 |
+| G0-03d | Supervisor spike (ADR-0005) with asserting tests on 3 OS — judged | S5 |
 | G0-04 | Go/no-go evaluating each kill criterion, signed by the Owner before Phase 1 — judged | lead + Owner |
 | G0-05 | ≥ 5 maintainer conversations recorded — judged | Owner |
 | UX-02 | Owner approves the API (ergonomics and small size) before the freeze — judged | Owner |

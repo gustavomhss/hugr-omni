@@ -1,5 +1,8 @@
 # ADR-0002 · Host-exit cleanup and host signals
 
+> **Lead status (2026-10-02):** reviewed by Codex (`docs/research/adr-reviews-s1-s2.md`, verdict *reject as a product baseline*). The accepted parts and the replacement design are in **ADR-0005 (supervisor)**; where this ADR and ADR-0005 disagree, ADR-0005 wins.
+
+
 **Status:** proposed (WP S1 spike; decisions backed by CI evidence; awaiting the lead)
 
 **Covers:** Q5 (host death cleanup, per OS) and Q6 (host Ctrl-C / SIGTERM with Node and Python hosts).

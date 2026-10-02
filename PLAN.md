@@ -340,6 +340,25 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** revisão do Codex no ADR; o lead instala localmente o wheel e o pacote npm de macOS-x64.
 - **Não fazer:** o binding real.
 
+#### S5 · Spike: supervisor (ADR-0005)
+- **Agente:** Opus · **Revisor:** Codex · **Depende:** ADR-0001/0002/0003 + revisões · **Escreve:** `spikes/supervisor/**` (branch), `docs/adr/0005-supervisor.md` (seção de evidência)
+- **Objetivo:** provar que um processo supervisor, dono de todos os filhos, resolve o que as revisões rejeitaram nos ADRs 0001–0003 sem custar o KPI de overhead.
+- **Completude:** G0-03d. Testes que **afirmam** o resultado e falham o CI se der errado, nos 3 OS:
+  - spawn pelo supervisor (pipe e PTY), com passagem de fd/handle;
+  - eventos de saída e `stop()` em árvore que resiste a SIGTERM;
+  - morte do host de 7 formas, inclusive no meio do spawn;
+  - host que ignora SIGCHLD ou colhe com `waitpid(-1)`;
+  - sentinela de reuso de PID;
+  - supervisor morto;
+  - Ctrl+C no PTY do Windows sem tocar o host;
+  - `ClosePseudoConsole` com um escritor teimoso e `graceMs` curto;
+  - latência de spawn contra o stdlib no mesmo job, em hosts Node, Bun, Deno e CPython.
+- **Sucesso:** o lead consegue congelar o seam `sys`/supervisor do W00 e refatiar W05/W06/W12/W12w sem nenhuma dúvida aberta.
+- **Invariantes:** nenhum teste "só imprime"; cada afirmação tem um controle que falharia; o host nunca faz fork nem muda o estado de console ou de sinais.
+- **Qualidade:** protocolo host↔supervisor documentado em ≤1 página; o supervisor tem uma thread só no Unix; o código do spike é descartável.
+- **DoD:** CI verde **com asserções** nos 3 OS; o Codex revisa a evidência contra o ADR-0005; o lead abre 3 runs.
+- **Não fazer:** otimizar; sandbox.
+
 #### WG0 · Gate G0
 - **Quem:** o lead redige, você assina · **Depende:** R1, R2, S1–S3 · **Escreve:** `docs/decisions/G0.md`
 - **Completude:** G0-04.
@@ -534,7 +553,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 ### Fases 2–3: sandbox (detalhes re-planejados depois do S4)
 
 #### S4 · Spike: sandbox macOS/Linux + threat model
-- **Agente:** Opus · **Revisor:** Codex (red team) · **Depende:** v0.1 · **Escreve:** `spikes/sandbox/**` (branch), `docs/adr/0005-sandbox.md`
+- **Agente:** Opus · **Revisor:** Codex (red team) · **Depende:** v0.1 · **Escreve:** `spikes/sandbox/**` (branch), `docs/adr/0006-sandbox.md`
 - **Completude:** SBX-00:
   - Seatbelt (incluindo o status de deprecated do `sandbox-exec`);
   - Landlock vs namespaces vs bubblewrap, com as restrições de distro;
@@ -583,7 +602,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** corrigir backend.
 
 #### SB6 · Windows (spike S5 + backend)
-- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/windows/**`, `docs/adr/0006-sandbox-windows.md`
+- **Agente:** Opus · **Depende:** SB1 · **Escreve:** `crates/hugr-omni/src/sandbox/windows/**`, `docs/adr/0007-sandbox-windows.md`
 - **Completude:** C-SBX-05.
 - **Sucesso:** o GUARANTEES mostra exatamente o que o Windows bloqueia, e cada linha tem teste.
 - **Invariantes:** o que não for garantido vira `SANDBOX_UNAVAILABLE`.
@@ -604,9 +623,10 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | Codex | concluído | `docs/research/processkit-audit.md` | "build on it with fixes" |
 | S3 | concluído (local) | `spike/packaging` · ADR-0004 | Q8: wait do processkit trava sob Node/Bun no Linux sem pidfd |
 | WG0 | **assinado: B** | `docs/decisions/G0.md` | TS no v0.1; Python e Rust no v0.2 |
-| S1, S2 | prontos para retomar | `spike/process`, `spike/pty` (só local) | CI destravado; retomam no núcleo próprio (Windows) |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
-| W00 | aguardando | — | depende de D5 (API) |
+| S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
+| S5 | despachado | `spike/supervisor` | valida o supervisor (ADR-0005) |
+| W00 | aguardando | — | depende do S5 (seam `sys`/supervisor); W05/W06/W12/W12w serão refatiados depois do S5 |
 ---
 
 ## 9. Riscos
@@ -723,6 +743,7 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
 - 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
 - 2026-10-01 · **G0 assinado: opção B.** A evidência medida (fit: 1 de 24 itens como está; perda silenciosa de saída; travamento sob Node/Bun no Linux sem pidfd; churn alto) mostrou que construir em cima do processkit nos faria reescrever I/O, timers, motivos, saída do host e o wait, mantendo uma dependência de 86 mil linhas. O processkit fica como **referência** (MIT): reaproveitamos técnicas (filho suspenso → Job → resume; cgroup v2 quando delegado), sem dependência de código. Linguagens: TS no v0.1; Python e Rust no v0.2. S1/S2 retomam assim que o billing do Actions for destravado (precisam de Windows).
+- 2026-10-02 · Lead: as revisões do Codex rejeitaram os ADRs 0001–0003 como base de produto, pela mesma causa raiz: trabalho de ciclo de vida dentro do host. Ficam proibidos fork no host, mudança de estado de console ou de sinais do host, e zumbis "pinados" que um host com reaper agressivo destrói. **Decisão (ADR-0005):** um supervisor (binário próprio, iniciado por exec, uma vez por host) cria e colhe todos os filhos; o I/O continua no host via fds/handles passados. A validação é o spike S5. Os testes de spike e de produto precisam **afirmar** o resultado (print não é aceite).
 - 2026-10-02 · Stakeholder: "quem aprova é você" → o lead aprova as decisões técnicas (D12). Contrato da API revisado pelo Codex em 3 rodadas (rework → rework → freeze_after_fixes); as decisões estão em `docs/api-contract.md`: `stop()` no lugar de `kill()`, stdin fechado por padrão, saída sempre drenada com perda avisada em ordem, `run()` completo ou `OUTPUT_LIMIT`, `RunResult` descreve a execução inteira, `lines()` e `mergeStderr`, `.cmd` via `cmd.exe` com escaping seguro. Congelado (D5).
 - 2026-10-02 · Owner: repo transferido de `HuGR-Labs` para `gmhelmold` porque o Actions da org estava travado por billing ("account is locked due to a billing issue"); o GitHub mantém redirect do endereço antigo.
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).

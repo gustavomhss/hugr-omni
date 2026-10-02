@@ -1,5 +1,8 @@
 # ADR-0001 · Process model: containment, tree kill, PID safety, exit observation
 
+> **Lead status (2026-10-02):** reviewed by Codex (`docs/research/adr-reviews-s1-s2.md`, verdict *reject as a product baseline*). The accepted parts and the replacement design are in **ADR-0005 (supervisor)**; where this ADR and ADR-0005 disagree, ADR-0005 wins.
+
+
 **Status:** proposed (WP S1 spike; decisions backed by CI evidence; awaiting the lead)
 
 **Covers:** Q1 (Windows race-free job), Q2 (nested jobs), Q3 (Windows graceful stop), Q4 (Unix groups and
