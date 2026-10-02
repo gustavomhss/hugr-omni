@@ -83,6 +83,8 @@ docker run --rm -v "$PWD":/w -w /w -v omni-cargo:/usr/local/cargo/registry -v om
   -v omni-rustup:/usr/local/rustup rust:1.96 cargo test --workspace
 ```
 
+- **Supervisor tests in Docker** need `--privileged`: the Linux PID-reuse test steers `ns_last_pid`, and it fails
+  rather than skips without it.
 - **Windows runtime:** `gh workflow run windows.yml -f filter=<test filter>`. Only W06 and W12w need it. One run at
   a time.
 - **First time:** `rustup target add x86_64-pc-windows-msvc --toolchain 1.98.0`.

@@ -12,7 +12,8 @@ pub const VERSION: u32 = 1;
 /// Largest frame (length prefix excluded). A bigger or malformed frame ends the connection.
 pub const MAX_FRAME: usize = 1 << 20;
 
-/// `Ready.info` bit: the supervisor watches the host with a pidfd (Linux) instead of polling.
+/// `Ready.info` bit: the host is watched by an event (pidfd on Linux, kqueue on macOS, a process handle on Windows),
+/// not by `getppid` polling.
 pub const INFO_PIDFD_HOST: u32 = 1;
 /// `Ready.info` bit: session members are signalled through pidfds (Linux) instead of `kill`.
 pub const INFO_PIDFD_MEMBERS: u32 = 2;

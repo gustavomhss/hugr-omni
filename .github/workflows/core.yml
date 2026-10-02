@@ -41,6 +41,11 @@ jobs:
           f=target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor
           readelf -l "$f" > "$RUNNER_TEMP/elf.txt"
           if grep -q INTERP "$RUNNER_TEMP/elf.txt"; then echo "::error::supervisor is dynamically linked"; exit 1; fi
+      - name: supervisor suite against the static musl binary
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" \
+            cargo test -p omni-supervisor --no-fail-fast
       - name: TypeScript surface and quickstart type-check
         working-directory: bindings/node
         run: npx -y -p typescript@5 tsc -p tsconfig.json
@@ -56,4 +61,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
+      - name: allow unprivileged user namespaces (the PID-reuse test steers ns_last_pid in its own namespace)
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: cargo test --workspace --no-fail-fast

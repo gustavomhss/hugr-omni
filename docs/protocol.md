@@ -33,7 +33,7 @@ it sends `Ready`. The host refuses another `version`, and a forked copy of the h
 | 0x04 | `Resize` | req u64 · id u64 · cols u16 · rows u16 |
 | 0x05 | `List` | req u64 · id u64 |
 | 0x06 | `Release` | req u64 · id u64 |
-| 0x81 | `Ready` | version u32 · pid u32 · info u32 (bit 0 pidfd host, bit 1 pidfd members) |
+| 0x81 | `Ready` | version u32 · pid u32 · info u32 (bit 0: event-based host watch — pidfd on Linux, kqueue on macOS, process handle on Windows; unset = `getppid` polling. bit 1: members signalled through pidfds) |
 | 0x82 | `Spawned` | req u64 · id u64 · pid u32 · pty_ends 2×u64 |
 | 0x83 | `SpawnFailed` | req u64 · code u8 (1 not found, 2 not executable, 3 bad cwd, 4 invalid, 5 io) · errno i32 · msg bytes |
 | 0x84 | `Exited` | id u64 · kind u8 (0 code, 1 signal) · value u32 |
@@ -62,7 +62,8 @@ released `id` gets `Ack unknown` for every request.
 **Descriptors.** I/O never crosses the supervisor.
 - **Unix pipes:** the child ends of the pipes travel as SCM_RIGHTS on the `Spawn` frame, in stdin, stdout, stderr
   order, one per pipe (stdout always).
-- **Unix PTY:** the supervisor opens the PTY and returns the master on `Spawned` (`pty_ends = [1, 0]`).
+- **Unix PTY:** no fds travel with the `Spawn`; the supervisor opens the PTY and returns the master on `Spawned`
+  (`pty_ends = [1, 0]`).
 - **Windows:** the host `DuplicateHandle`s its pipe ends into the supervisor and lists them in `handles`. PTY ends
   come back as values in `pty_ends`, which the host pulls out with `DUPLICATE_CLOSE_SOURCE`.
 
