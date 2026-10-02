@@ -65,3 +65,6 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: cargo test --workspace --no-fail-fast
+      - name: K4 spawn round trip, release build (Linux is the K4 reference)
+        if: runner.os == 'Linux'
+        run: cargo test --release -p hugr-omni --no-fail-fast -- k4
