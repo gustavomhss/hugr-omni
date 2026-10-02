@@ -466,7 +466,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** timeout e cancelamento.
 
 #### W09 · Supervisão: timeout, cancelamento, host
-- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/process/{deadline,run}.rs` e o ponto de armar timeout/cancelamento em `spawn_pipe` (`process/child.rs`)
+- **Agente:** Opus · **Depende:** W07 · **Escreve:** `crates/hugr-omni/src/process/{deadline,run}.rs` e o ponto de armar timeout/cancelamento em `Child::start` (`process/child.rs`; vale para pipe e terminal)
 - **Completude:** C-TMO-01, C-TMO-02, C-HOST-01 (host Rust), C-RS-01, C-RS-02 (todos os cenários via API Rust; a prova nos 5 alvos vem no CI completo do B2).
 - **Sucesso:** timeout e cancelamento nunca deixam nada para trás; o host sair limpa tudo, no tier declarado.
 - **Invariantes:** cada waiter resolve exatamente uma vez; a limpeza na morte do host é do supervisor (ADR-0005), não do host; nada bloqueia o executor.
@@ -489,7 +489,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** parsing de linhas; strip de ANSI.
 
 #### W12 · PTY no Unix + lado host
-- **Agente:** Opus · **Depende:** W04, W05, W10, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_unix/**`, `crates/hugr-omni/src/pty/**`
+- **Agente:** Opus · **Depende:** W04, W05, W10, ADR-0003/0005 · **Escreve:** `crates/omni-supervisor/src/pty_unix/**`, `crates/hugr-omni/src/pty/**` e, em `process/child.rs`, os corpos de `spawn_pty` e `PtyChild::resize`
 - **Objetivo:** terminal interativo no Linux e no macOS, sem perder saída e sem travar.
 - **Completude:** PTYSYS-U, C-PTY-01, C-PTY-02, C-PTY-03, C-PTY-04.
 - **Sucesso:** um agente roda `bash` ou `python` interativo, redimensiona, manda Ctrl-C e encerra; um programa que imprime e sai na hora entrega 300/300 saídas no macOS.
