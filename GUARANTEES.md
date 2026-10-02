@@ -37,5 +37,5 @@ The promises themselves are `docs/api-contract.md`; the items are `docs/acceptan
 | C-TMO-01 / C-TMO-02 timeout and cancellation | planned | planned | planned | scenarios + K2 |
 | C-HOST-01 host exit leaves trees per tier | planned | planned | planned | idiom tests + K1 |
 | C-PTY-01..04 terminal size, interaction, no lost output, tree stop | planned | planned | planned | scenarios |
-| ConPTY on builds < 26100: per-pseudoconsole handle leak | – | – | to be measured (W12w) | W12w |
+| ConPTY on builds < 26100: per-pseudoconsole handle leak | – | – | declared: 1 handle per terminal session stays in the supervisor on build 20348 (Server 2022); 0 on 26100 and later | W12w, windows.yml run 37067122812 (CONPTY-HANDLES) |
 | C-TS-01 / C-TS-02 TS on Node 22/24, Bun, Deno | planned | planned | planned | runner |
