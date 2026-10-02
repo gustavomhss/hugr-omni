@@ -27,7 +27,7 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-KILL-03 | A descendant that deliberately escapes (setsid / job breakaway) behaves exactly as GUARANTEES declares per OS | W07 |
 | C-EXIT-01 | Exit codes 0/1/42/255 and Windows codes > 255 (e.g. `0xC000013A`) are reported as the same non-negative integer in all languages; `reason` is `exit`/`signal`/`killed`/`timeout`/`aborted` with the documented precedence | W07 |
 | C-PROC-01 | `processes()` lists exactly the live processes `stop()` would end: a 3-level fixture tree appears with correct `parentPid` links and names (root's `parentPid` null), descendants stay listed after the root exits, a Unix descendant that escaped via `setsid` is alive and not listed; after `stop()` it returns `[]` and every listed pid is dead per the OS; no argument text appears | W07 |
-| C-SCOPE-01 | Leaving scope kills the tree: TS `await using`, Python `with`/`async with`, Rust drop | W07 |
+| C-SCOPE-01 | Leaving scope kills the tree: TS `await using`, Python `with`/`async with`, Rust drop. Proven by the per-language idiom tests (C-RS-01, C-TS-01, C-PY-01): the scenario DSL has no scope | W07 |
 | C-TMO-01 | `timeout` kills the whole tree, reason `timeout`, returns within timeout + grace + 1 s | W09 |
 | C-TMO-02 | Cancellation (AbortSignal / task cancel / KeyboardInterrupt / CancellationToken) kills the tree, reason `aborted`; an already-cancelled request runs nothing (`ABORTED`) | W09 |
 | C-HOST-01 | Rust host: main return, `process::exit`, uncaught panic, SIGINT/SIGTERM and hard kill leave trees as GUARANTEES declares per OS | W09 |
@@ -47,6 +47,17 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-DOC-01 | The root README and guide lead with TypeScript (Python and Rust as equals); each language quickstart ≤ 10 lines; every README code block runs in CI on 3 OS | W18 |
 | C-PKG-01 | Clean install with no compiler on 5 targets runs the hello example (= K9): npm / bun / deno in v0.1; pip / uv / cargo in v0.2 | W14 |
 | C-REL-01 | One tag publishes npm, PyPI and crates.io at the same version; post-publish smoke passes on 5 targets; CHANGELOG and SemVer 0.x policy published | W21 |
+
+Promises the deterministic scenarios cannot express are proven elsewhere, never dropped:
+- leaving scope (C-SCOPE-01): idiom tests;
+- pending writes settling on exit (C-IO-03): the stdin workload of QA-D;
+- decoding restarting at a gap (C-IO-02): `io` unit tests, plus K5;
+- a relative program resolved against the host cwd (C-SPAWN-03): `spawn` unit tests;
+- loss at exit (C-IO-04): K5.
+
+**Pending ledger.** `conformance/pending.txt` lists, one per line, the items whose owning WP has not landed yet (`<ID> <WP>`).
+The runners report a pending item that fails as `pending`, and FAIL a pending item that passes (remove it from the
+ledger). Only the lead edits the ledger, and it must be empty for a release.
 
 Sandbox (phases 2–3):
 

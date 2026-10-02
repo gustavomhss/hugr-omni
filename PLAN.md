@@ -764,6 +764,12 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - as mensagens de `NOT_FOUND` mostram o valor do PATH e do PATHEXT pesquisados: é o valor que falhou e o usuário precisa dele para consertar (UX-D). Argumentos e os outros valores de env nunca aparecem;
   - novo seam `binding` (oculto da doc, do W03) com as regras de número que só TS e Python conseguem violar (NaN, negativo, fração), para o texto do erro ser o mesmo em toda linguagem;
   - `error/messages.rs` vira compartilhado e só recebe acréscimos: cada WP adiciona o próprio bloco `impl Error`.
+- 2026-10-02 · Lead, entrega do W01:
+  - C-SCOPE-01 é provado pelos testes de idioma de cada linguagem (o DSL não tem escopo); os outros quatro trechos que os cenários não expressam têm a prova nomeada no `acceptance.md`;
+  - aprovado o crate `regex` como dev-dependency: substitui o motor de regex caseiro de 315 linhas, e os cenários usam o subconjunto que JS e Rust leem igual;
+  - **registro de pendências** `conformance/pending.txt`: um item pendente que falha conta como `pending`, e um que passa falha o CI até sair do registro. Só o lead edita, e ele tem que estar vazio no release;
+  - o `unsafe` do fixture fica restrito a `omni-fixture/src/sys`;
+  - as 4 ambiguidades do SPEC que o primeiro runner resolveu viraram regra no SPEC.
 - 2026-10-02 · Lead, retrabalho do W06: um `Stop` nunca fica sem resposta (K2). No Windows, com o Job vazio (a verdade do kernel), a prova extra por pid espera no máximo 1 s; se ainda não der para inspecionar um membro, o `Stopped` sai mesmo assim e o fato vai para o stderr (o caso residual está declarado no GUARANTEES). O limite é de 4096 árvores por supervisor nos dois OS (`docs/protocol.md`). As constantes `JOB_OBJECT_MSG_*` foram definidas localmente a partir do `winnt.h`, em vez de ligar mais um feature do `windows-sys`.
 - 2026-10-02 · Lead, entrega do W04: aprovado o feature `Win32_System_LibraryLoader` do `windows-sys` para achar o supervisor ao lado do módulo nativo no Windows (é como o pacote npm o distribui); `FailCode::Invalid` vira `INVALID_ARGUMENT`; o K4 em release é medido como max(0,2 ms, 3× um ping-pong de socketpair na mesma execução), só em release, e a prova oficial do K4 continua no QA (Q1).
 - 2026-10-02 · Lead, rodada 2 do W03:

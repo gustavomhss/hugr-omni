@@ -57,9 +57,19 @@ failure, never a pass.
 | `processes` | `processes()` | `capture` (the pids), `expect` |
 | `os` | asks the OS (never the library) that every pid in `pids` is `alive` or `dead` (gone or a zombie) | `pids` (a capture or a list), `withinMs` (poll until true or fail) |
 
+Regexes use only the subset that JavaScript and Rust's `regex` crate read the same way: no look-around, no
+backreferences, no named groups.
+
 `until.match` and `capture` regexes are applied to **complete lines** (without the line end), assembled by the runner
 in both chunk and line mode, so a marker split across chunks is never matched or captured half-way. A capture
 collects one value per matching line.
+
+Settled while writing the first runner; every runner follows them:
+- `write` without `data` only closes stdin;
+- in lines mode, the `stdout`/`stderr`/`pty` text of a `read` is each line followed by `\n`;
+- a `read` after `detach`, or in the other mode, makes a new claim, which the contract refuses with
+  `INVALID_ARGUMENT` (so a scenario can expect that error);
+- a `read` consumes whole chunks.
 
 `options` uses the TS names of `docs/api-contract.md` (`cwd`, `env`, `inheritEnv`, `timeoutMs`, `graceMs`, `text`,
 `mergeStderr`, `input`, `maxOutputBytes`, `stdin`, `pty`); each runner maps them to its language.
