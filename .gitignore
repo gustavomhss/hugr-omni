@@ -7,3 +7,4 @@ __pycache__/
 dist/
 *.whl
 .DS_Store
+.claude/

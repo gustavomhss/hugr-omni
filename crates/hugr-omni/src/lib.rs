@@ -30,6 +30,8 @@
 #![allow(dead_code)]
 
 mod api;
+#[doc(hidden)]
+pub mod binding;
 mod client;
 mod error;
 mod io;

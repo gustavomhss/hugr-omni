@@ -26,6 +26,7 @@ path. Read it; never copy it wholesale. It is throwaway code, with files above t
 | `crates/hugr-omni/src/spawn` | validation, resolution, env (pure) | `error`, `types` |
 | `crates/hugr-omni/src/error` | `Error`, `ErrorCode`, messages | `types` |
 | `crates/hugr-omni/src/types` | public value types (frozen) | – |
+| `crates/hugr-omni/src/binding` | number rules for bindings (hidden, W03) | `error` |
 | `crates/omni-proto` | messages + codec | – |
 | `crates/omni-supervisor/src/{unix,windows,pty_unix,pty_windows}` | the supervisor | `omni-proto` |
 | `crates/omni-fixture` | test program | – |
@@ -54,6 +55,8 @@ by a lead decision. Their bodies and every private item belong to the module's o
   `sleep`.
 - **Contract scenarios** (`conformance/scenarios`, `crates/hugr-omni/tests`) are read-only for implementers
   (INV-13).
+- **Error texts** live in `crates/hugr-omni/src/error/messages.rs` as `pub(crate)` `Error` constructors. It is
+  append-only and shared: each WP adds its own `impl Error` block at the end, and never edits another WP's texts.
 - **Test crates only** may start with `#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]`. Every
   test crate needs a `//!` doc line, because `missing_docs` is denied.
 
