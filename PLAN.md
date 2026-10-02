@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B)** · contrato congelado (D5) · W00 na `main` · primeira onda (W01, W03–W06) em execução no `bundle/B2` · 2026-10-02
+> Status: **G0 assinado (B)** · contrato congelado (D5) · W00 na `main` · primeira onda (W01, W03–W06) integrada no `bundle/B2`, PR aberto · 2026-10-02
 > Repo: `gmhelmold/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -649,6 +649,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | W06 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe do quoting vermelho no Windows) | `031eb1b` | SUP-W + C-SPAWN-02 verdes em Server 2025 (26100) e 2022 (20348) |
 | W04 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe `bInheritHandles=1` vermelho no Windows) | `ac5c023` | PROTO-01 verde em macOS, Linux e Windows; a prova do lead "matar o supervisor durante um flood" com o supervisor real fica para quando o W05 entrar |
 | W05 | **no `bundle/B2`** (Codex: aprovado na rodada 6; probe sessão→grupo vermelho; o gate a frio sob carga achou a corrida de membro saindo no macOS, corrigida) | `a44901c` | SUP-U verde em macOS (também sob carga), Linux --privileged e musl estático |
+| W01 | **no `bundle/B2`** (Codex: aprovado na rodada 5; mutantes da referência pegos pelo lead) | `0a453ef` | fixture + 43 cenários + runner Rust; linha base `contract: 0 passed, 36 pending, 0 failed` em macOS e Linux |
 | B0 | PR aberto | `bundle/B0` | pesquisa + ADR-0004 + G0; citações do R1 conferidas (12 ok, 8 parciais, 0 erradas) |
 | S1, S2 | concluídos · revisados | ADR-0001/0002/0003 | Codex: *reject* como base de produto → ADR-0005 |
 ---
