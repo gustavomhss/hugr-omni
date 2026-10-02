@@ -35,23 +35,31 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - **Spikes:** os branches `spike/*` ficam só no GitHub (as evidências dos ADRs apontam para eles); as worktrees locais
   foram removidas.
 
-## Estado (fim do dia 2026-10-02)
+## Estado
 
-- **Primeira onda integrada no `bundle/B2`** (rebaseado sobre a `main`):
-  - W01 (fixture + 43 cenários + runner Rust, registro `conformance/pending.txt`);
-  - W03 (resolve/env/erros);
-  - W04 (cliente/canal);
-  - W05 (supervisor Unix);
-  - W06 (supervisor Windows).
-  Cada um passou pelo Codex até `approve`, com o probe do lead e os gates a frio (macOS sob carga, Linux --privileged, musl, Windows CI).
-- **Linha do contrato:** `0 passed, 36 pending, 0 failed`, porque a camada de processo ainda é stub.
-- **Próximo:**
-  1. PR do B2 → CI completo → merge na `main`;
-  2. congelar os seams internos de io/process/pty (V1 do lead);
-  3. segunda onda: W10 (io), W07 (Child), W09 (timeout/cancel/run), W02 (runner TS);
-  4. depois disso o contrato deve ficar verde, e os itens saem do `pending.txt`.
-- **Prova pendente do lead (DoD do W04):** matar o supervisor real durante um flood. Agora é possível, com o W05 integrado.
-- **Revisões do Codex:** ficam em `~/Documents/HuGR/hugr-omni-reviews/`. O prompt sai de `scripts/review-prompt.py <WP> <base> <head> [notes]`.
+- **`main` = `70d1828`:** primeira onda completa (W00, W01, W03–W06), merged pelo PR #4 com CI verde (3 OS, supervisor
+  no musl, K4 em release no Linux). Linha do contrato: `0 passed, 36 pending, 0 failed`.
+- **`bundle/B3`** (a partir da `main`): seam interno do `io` congelado (`Pumps`, `Source`, `Collected`, `Stdin`),
+  `scripts/brief.py` (gera o brief a partir do card) e `scripts/review-prompt.py` (o prompt do Codex).
+- **Segunda onda em execução,** baseline `a62ddf8`, briefs em `~/Documents/HuGR/hugr-omni-reviews/briefs/`:
+  - W10, io (Opus);
+  - W07, Child (Opus);
+  - W02, runner TS (Sonnet);
+  - W12w, ConPTY (Opus).
+- **Depois:**
+  - W09 (timeout/cancel/run), depois do W07;
+  - W12 (PTY Unix + lado host), depois do W10, com o seam do `pty` congelado no V1;
+  - W13 (binding Node), depois do B2/B3.
+  Os itens saem do `conformance/pending.txt` (só o lead edita) quando ficam verdes.
+- **Provas pendentes do lead:** matar o supervisor real durante um flood (DoD do W04), quando o W07 entrar; e, no W07,
+  o probe "tirar a etapa forçada do stop".
+- **Fluxo de cada entrega:**
+  1. L0;
+  2. o lead lê o código;
+  3. o probe;
+  4. o Codex até aprovar;
+  5. gates a frio, incluindo macOS sob carga e Linux privilegiado;
+  6. squash no bundle.
 
 ## Avisos
 
