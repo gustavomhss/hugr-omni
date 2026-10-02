@@ -1,9 +1,10 @@
 # Fast CI: runs only for non-draft PRs to main, pushes to main and by hand (wp/* and bundle/* never run CI).
+# Converting a PR to draft starts a run that skips every job, which cancels the run in progress.
 name: core
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
   workflow_dispatch:
@@ -38,8 +39,8 @@ jobs:
         run: |
           cargo build --release -p omni-supervisor --target x86_64-unknown-linux-musl
           f=target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor
-          file "$f"
-          if readelf -l "$f" | grep -q INTERP; then echo "::error::supervisor is dynamically linked"; exit 1; fi
+          readelf -l "$f" > "$RUNNER_TEMP/elf.txt"
+          if grep -q INTERP "$RUNNER_TEMP/elf.txt"; then echo "::error::supervisor is dynamically linked"; exit 1; fi
       - name: TypeScript surface and quickstart type-check
         working-directory: bindings/node
         run: npx -y -p typescript@5 tsc -p tsconfig.json

@@ -36,6 +36,7 @@ mod io;
 mod process;
 mod pty;
 mod spawn;
+mod types;
 
 pub use api::*;
 pub use error::{Error, ErrorCode};

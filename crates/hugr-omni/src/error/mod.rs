@@ -4,7 +4,7 @@ mod messages;
 
 use std::fmt;
 
-use crate::process::RunOutput;
+use crate::types::RunOutput;
 
 /// What went wrong, as a stable code. The same codes exist in every language (`OmniError.code` in TS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

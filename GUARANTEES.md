@@ -9,13 +9,13 @@ The promises themselves are `docs/api-contract.md`; the items are `docs/acceptan
 | | Linux | macOS | Windows |
 |---|---|---|---|
 | Kill unit | the root's session | the root's session | the Job (no breakaway) |
-| A descendant that leaves on purpose | `setsid`/`setpgid` out of the session **escapes** (declared) | same as Linux | cannot leave: breakaway is refused |
+| A descendant that leaves on purpose | `setsid` (a new session) **escapes** (declared); changing process group inside the session stays contained | same as Linux | cannot leave: breakaway is refused |
 | Graceful stop | SIGTERM (+SIGHUP for a PTY) + SIGCONT to the session | same as Linux | CTRL_BREAK to console processes (best effort); `ClosePseudoConsole` for a PTY |
 | Forced stop after `graceMs` | SIGKILL until the session is empty: guaranteed | same as Linux | `TerminateJobObject`: guaranteed |
 | Host process dies (any way, incl. SIGKILL) | the supervisor stops every tree within its grace | same as Linux | same, and the Jobs close if the supervisor dies too |
 | Supervisor process dies | trees keep running, **unprotected** (declared); the next spawn starts a new supervisor | same as Linux | trees die with their Jobs |
 | PID reuse | a gone tree is never signalled again (root pinned until the session is empty) | same as Linux | the root handle is held until the tree is gone and released |
-| Host state | no signal handler, no exit hook, no fork in the host | same as Linux | the host's console state never changes |
+| Host state | no signal handler, no exit hook, no fork in the host | same as Linux, plus a declared window: an fd received from the supervisor gets CLOEXEC a moment after creation, so a concurrent `fork` in the host can inherit it | the host's console state never changes |
 
 ## Promises
 

@@ -19,12 +19,13 @@ path. Read it; never copy it wholesale. It is throwaway code, with files above t
 | Where | What | May use |
 |---|---|---|
 | `crates/hugr-omni/src/api` | public surface (frozen) | everything below |
-| `crates/hugr-omni/src/process` | `Child`, `Exit`, timeout/cancel, `run` | `client`, `io`, `spawn`, `pty`, `error` |
-| `crates/hugr-omni/src/spawn` | validation, resolution, env (pure) | `error` |
-| `crates/hugr-omni/src/io` | output pumps, decoding, lines, stdin | `error` |
-| `crates/hugr-omni/src/pty` | host side of terminals | `client`, `io`, `error` |
-| `crates/hugr-omni/src/client` | supervisor lifecycle and channel | `omni-proto`, `error` |
-| `crates/hugr-omni/src/error` | `Error`, `ErrorCode`, messages | – |
+| `crates/hugr-omni/src/process` | `Child`, timeout/cancel, `run` | `pty`, `client`, `io`, `spawn`, `error`, `types` |
+| `crates/hugr-omni/src/pty` | host side of terminals | `client`, `io`, `error`, `types` |
+| `crates/hugr-omni/src/client` | supervisor lifecycle and channel | `omni-proto`, `spawn` (the `Spec` type), `error` |
+| `crates/hugr-omni/src/io` | output pumps, decoding, lines, stdin | `error`, `types` |
+| `crates/hugr-omni/src/spawn` | validation, resolution, env (pure) | `error`, `types` |
+| `crates/hugr-omni/src/error` | `Error`, `ErrorCode`, messages | `types` |
+| `crates/hugr-omni/src/types` | public value types (frozen) | – |
 | `crates/omni-proto` | messages + codec | – |
 | `crates/omni-supervisor/src/{unix,windows,pty_unix,pty_windows}` | the supervisor | `omni-proto` |
 | `crates/omni-fixture` | test program | – |
@@ -45,8 +46,9 @@ by a lead decision. Their bodies and every private item belong to the module's o
 - **Never observe child exit through tokio's process/SIGCHLD machinery** (INV-16). `tokio::process` is banned.
 - **No `unwrap`/`expect`/`panic` in library or supervisor code** (clippy denies it). Nothing may panic across FFI.
 - **`unsafe` only in `client`, `pty`, the supervisor and the bindings,** each block with a `// SAFETY:` comment.
-- **Never block the host:** not the Node main thread, not the tokio executor. The one exception is
-  `client::spawn`, which blocks for one bounded round trip, like `std::process::Command::spawn`.
+- **Never block the host:** not the Node main thread, not the tokio executor. The one exception is spawning,
+  which blocks for bounded round trips, like `std::process::Command::spawn`: one for a pipe child, two for a Unix
+  PTY child (`client::spawn`, then `Tree::go`).
 - **File size:** at most 650 lines per code file (ideal ≤ 400). Split inside your module before 600.
 - **Tests assert.** A timeout or an incomplete observation is a failure. Synchronize on fixture markers, never on
   `sleep`.
@@ -74,7 +76,7 @@ cargo test --workspace
 
 ```bash
 docker run --rm -v "$PWD":/w -w /w -v omni-cargo:/usr/local/cargo/registry -v omni-target:/w/target \
-  -v omni-rustup:/usr/local/rustup rust:1 cargo test --workspace
+  -v omni-rustup:/usr/local/rustup rust:1.96 cargo test --workspace
 ```
 
 - **Windows runtime:** `gh workflow run windows.yml -f filter=<test filter>`. Only W06 and W12w need it. One run at

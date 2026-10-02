@@ -83,7 +83,15 @@ Exit / RunResult · OmniError.
   literally is rejected with `INVALID_ARGUMENT` before anything runs. Metacharacters (`& | % ^ $ ;` …) are
   never interpreted.
 - Validation (`INVALID_ARGUMENT`, `INVALID_CWD`) happens before any process exists. Startup failures are
-  thrown synchronously by `spawn()` and reject `run()`.
+  thrown synchronously by `spawn()` and reject `run()`. The rules:
+  - `timeoutMs`, `graceMs`: finite, ≥ 0, ≤ 4294967295; a fraction rounds up to the next millisecond; `0` means at
+    once.
+  - `maxOutputBytes`: an integer ≥ 0.
+  - PTY `cols`/`rows`: integers from 1 to 32767.
+  - Strings (`command`, `args`, `cwd`, `env` keys and values) must not contain NUL; an `env` key must not be empty
+    or contain `=`.
+- `inheritEnv: false` on Windows still passes `SystemRoot` from the host unless `env` sets or removes it (many
+  programs cannot start without it); nothing is added elsewhere.
 
 ## 4. Output
 
@@ -117,8 +125,10 @@ Exit / RunResult · OmniError.
   everything still alive. It also works after `wait()` resolved (it then ends the surviving descendants and
   keeps the root's recorded `Exit`). It resolves once the tree is confirmed gone (per tier), ends `output`,
   and returns the `Exit`; calling it again after that is a no-op returning the same `Exit`.
-- **`processes()`** is a snapshot of the live processes that `stop()` would end right now, by the same rule
-  (Unix: the root's session; Windows: the Job), so it never lists more or less than `stop()` reaches. Each entry has
+- **`processes()`** lists the live processes that `stop()` would end, by the same membership rule (Unix: the root's
+  session; Windows: the Job), collected over one short scan. Processes can start or exit during and after the scan,
+  so a later `stop()` may reach a different set; for a tree that is not changing, the list is exactly what `stop()`
+  reaches, and it never includes a process outside the rule. Each entry has
   `pid`, `parentPid` (the parent's pid when the parent is in the list, otherwise `null` — e.g. the root, or an orphan)
   and `name` (the executable's file name without directory: `node` on Unix, `node.exe` on Windows; `null` when the
   OS does not tell). Command-line arguments are never included (they often carry secrets). Order is unspecified.

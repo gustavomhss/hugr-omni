@@ -92,12 +92,13 @@ Um workspace, poucas crates, um módulo por responsabilidade. Cada módulo tem u
 | Crate / módulo | Responsabilidade | Pode depender de | Dono |
 |---|---|---|---|
 | `hugr-omni` · `api/` | superfície pública (`docs/api-contract.md`) | `process`, `io`, `spawn`, `pty`, `error` | W00 (congelado) |
-| `hugr-omni` · `process/` | estado do `Child`: `stop`, `wait`, `Exit` e precedência de `reason`, timeout e cancelamento, `run` | `client`, `io`, `spawn`, `pty`, `error` | W07, W09 |
-| `hugr-omni` · `spawn/` | do pedido ao `Spawn`: `resolve` (PATH final + PATHEXT), `env`, `validate` | `error` | W03 |
-| `hugr-omni` · `io/` | bombas de saída com buffer limitado, decodificação, `lines`, stdin, coleta do `run` | `error` | W10 |
-| `hugr-omni` · `pty/` | lado host do PTY: leitura, `Go`, `resize` | `client`, `io`, `error` | W12 |
-| `hugr-omni` · `client/` | ciclo de vida do supervisor (início lazy, geração, reinício, checagem de pid criador), canal não bloqueante | `omni-proto`, `error` | W04 |
-| `hugr-omni` · `error/` | `OmniError` e códigos (`mod.rs`, congelado) + textos (`messages`) | — | W00, W03 |
+| `hugr-omni` · `process/` | estado do `Child`: `stop`, `wait`, `processes`, precedência de `reason`, timeout e cancelamento, `run` | `pty`, `client`, `io`, `spawn`, `error`, `types` | W07, W09 |
+| `hugr-omni` · `pty/` | lado host do PTY: leitura, `Go`, `resize` | `client`, `io`, `error`, `types` | W12 |
+| `hugr-omni` · `client/` | ciclo de vida do supervisor (início lazy, geração, reinício, checagem de pid criador), canal não bloqueante | `omni-proto`, `spawn` (tipo `Spec`), `error` | W04 |
+| `hugr-omni` · `io/` | bombas de saída com buffer limitado, decodificação, `lines`, stdin, coleta do `run` | `error`, `types` | W10 |
+| `hugr-omni` · `spawn/` | do pedido ao `Spawn`: `resolve` (PATH final + PATHEXT), `env`, `validate` | `error`, `types` | W03 |
+| `hugr-omni` · `error/` | `OmniError` e códigos (`mod.rs`, congelado) + textos (`messages`) | `types` | W00, W03 |
+| `hugr-omni` · `types` | tipos de valor públicos (`Exit`, `RunOutput`, `Chunk`, `ProcessInfo`, ...), sem dependências | — | W00 (congelado) |
 | `omni-proto` | frames e mensagens host↔supervisor (`docs/protocol.md`) | — | W00 (tipos), W04 (codec) |
 | `omni-supervisor` · `unix/` | loop de eventos, `posix_spawn`, sessões, inventário, pidfd/kqueue, colheita e pin, `Stop`, morte do host | `omni-proto` | W05 |
 | `omni-supervisor` · `windows/` | `CreateProcessW` + `JOB_LIST`, quoting do std, Jobs, CTRL_BREAK do próprio console, morte do host | `omni-proto` | W06 |
@@ -382,16 +383,16 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
   - `Cargo.toml` (`members = ["crates/*", "bindings/*"]`), `rust-toolchain.toml`;
   - `AGENTS.md` e `CLAUDE.md`;
   - `GUARANTEES.md`, `docs/protocol.md`, `conformance/SPEC.md`, `conformance/FIXTURE.md`;
-  - `crates/hugr-omni/src/{lib.rs, api/**, error/mod.rs}` (API pública documentada, corpos stub) e a fachada `mod.rs` de `spawn`, `process`, `io`, `pty` e `client`;
+  - `crates/hugr-omni/src/{lib.rs, types.rs, api/**, error/mod.rs}` (API pública documentada, corpos stub) e a fachada `mod.rs` de `spawn`, `process`, `io`, `pty` e `client`;
   - `crates/omni-proto/**` (tipos das mensagens congelados; o codec fica como stub);
   - `crates/omni-supervisor/src/main.rs` + as fachadas `mod.rs` de `unix`, `windows`, `pty_unix` e `pty_windows`;
-  - `bindings/node/{index.d.ts,package.json}`;
+  - `bindings/node/{index.d.ts,package.json,tsconfig.json,examples/quickstart.ts}` e um `index.js` stub carregável (o W13 o substitui);
   - `.github/workflows/{core,windows}.yml` (com build musl estático do supervisor), `.github/review/schema.json`.
 - **Completude:** SCF-01 (compila nos 3 OS e no musl; os stubs retornam erro, nunca panic; `file-size-guard` e seus testes de dentes rodando no `core.yml`).
 - **Sucesso:** qualquer WP pode ser despachado sem nenhuma pergunta de interface.
 - **Invariantes:** contrato mínimo; DSL de cenários com ≤10 passos; protocolo com ≤1 página; hash do contrato registrado.
 - **Qualidade:** doc pública escrita primeiro (README-driven); os quickstarts compilam.
-- **DoD:** o Codex pergunta "isto é o mínimo? algum nome confunde?" sobre a API, o protocolo e os seams; `move-in` confere o relay hook.
+- **DoD:** o Codex pergunta "isto é o mínimo? algum nome confunde?" sobre a API, o protocolo e os seams.
 - **Não fazer:** implementar comportamento.
 
 #### W01 · Fixture + contrato (cenários + runner Rust)
@@ -764,7 +765,19 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
   - os seams internos de `io`, `process` e `pty` ficam só nos tipos públicos; o resto é congelado pelo lead no V1 de cada WP, porque congelar agora seria design especulativo;
   - `bindings/node` entra no workspace no W13;
   - toolchain fixado em 1.98.0;
-  - hash do contrato (sha256, 16 primeiros): `3b8acf717f430682`.
+  - hash do contrato: ver a entrada seguinte (o contrato mudou na revisão).
+- 2026-10-02 · Lead, revisão do Codex sobre o W00 (`changes_requested`: 1 P0, 9 P1, 3 P2), tudo corrigido:
+  - camadas: os tipos de valor públicos foram para um módulo `types` sem dependências (o `error` apontava para `process`); o `client` pode usar o `Spec` do `spawn` (uma aresta para baixo, registrada na tabela, em vez de duplicar o struct);
+  - PTY síncrono: `Tree::go` bloqueia (segunda ida e volta limitada), então o `spawn_pty()` reporta falha de exec de forma síncrona; o `resize` não espera o `Ack`;
+  - protocolo enxuto e sem ambiguidade: `Stopped` sem payload; sem slot de stdout (é sempre pipe); `pty_ends`; codificações, valores canônicos e respostas para id desconhecido definidos; CLOEXEC no macOS por `fcntl`, com a janela declarada no GUARANTEES;
+  - contrato: `processes()` promete a mesma regra de pertença numa varredura curta (a árvore pode mudar entre a lista e o `stop()`); regras numéricas de validação; `SystemRoot` é o único extra do Windows com `inheritEnv: false`; o `timeout` passou para o `spawn::Request` e é validado num lugar só;
+  - SPEC: `entries` para conferir os pais no `processes`, leitura por stream, matcher `hex`, `${handle.pid}`, `$number` para NaN e `langs`;
+  - GUARANTEES: `setpgid` não sai da sessão (só `setsid`);
+  - CI: o gate do musl não passa mais quando a inspeção falha; `converted_to_draft` cancela a run em andamento;
+  - `index.js` stub carregável, para o runner TS falhar pelo motivo certo;
+  - o item de DoD do relay hook (`move-in`) saiu: o `AGENTS.md` já é a memória do repo;
+  - ficaram de propósito os arquivos de 1 linha `process/deadline.rs` e `error/messages.rs`: evitam que o W09 e o W03 editem um `mod.rs` de outro dono.
+  - hash do contrato congelado (sha256, 16 primeiros): `86907cb5b71d790a`.
 - 2026-10-01 · Owner: testes determinísticos se limitam ao contrato público (~35 itens); o peso da prova vai para o QA de uso real com KPIs. O loop do crítico frio da suíte foi encerrado na rodada 8 por essa diretriz. Os achados finos que restaram foram absorvidos como KPIs (K1–K6) ou como linhas de item existente (códigos de saída > 255 no Windows; paridade no nível de opção e campo).
 - 2026-10-01 · Owner: PRs em bundle por onda; CI completo uma vez por bundle; verificação local primeiro.
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.

@@ -3,22 +3,14 @@
 use std::ops::Deref;
 use std::time::Duration;
 
-use super::{Exit, Options, ProcessInfo};
+use super::Options;
 use crate::error::{Error, ErrorCode};
 use crate::io::{Lines, Output};
-use crate::spawn::{PtySize, Request};
+use crate::spawn::Request;
+use crate::types::{DroppedBytes, Exit, ProcessInfo, PtySize};
 
 fn todo() -> Error {
     Error::new(ErrorCode::Io, "not implemented yet (W07: process/child)")
-}
-
-/// Bytes dropped so far because nobody was reading (contract §4). PTY output counts as stdout.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct DroppedBytes {
-    /// stdout (and PTY output).
-    pub stdout: u64,
-    /// stderr.
-    pub stderr: u64,
 }
 
 /// A running process and its tree. What pipe and PTY children share.

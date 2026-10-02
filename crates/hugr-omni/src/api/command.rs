@@ -7,8 +7,9 @@ use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 use crate::error::Error;
-use crate::process::{self, Options, PipeChild, PtyChild, RunOutput};
-use crate::spawn::{Mode, PtySize, Request, Stdin};
+use crate::process::{self, Options, PipeChild, PtyChild};
+use crate::spawn::{Mode, Request};
+use crate::types::{PtySize, RunOutput, Stdin};
 
 /// A process to run: program, arguments and options. Nothing is checked until `run()` or `spawn()`,
 /// which validate everything before any process exists.
@@ -84,7 +85,7 @@ impl Command {
 
     /// Deadline for the whole run; on expiry the tree is stopped and the reason is `Timeout`.
     pub fn timeout(&mut self, timeout: Duration) -> &mut Self {
-        self.opts.timeout = Some(timeout);
+        self.req.timeout = Some(timeout);
         self
     }
 

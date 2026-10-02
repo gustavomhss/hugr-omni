@@ -17,10 +17,10 @@ pub const INFO_PIDFD_HOST: u32 = 1;
 /// `Ready.info` bit: session members are signalled through pidfds (Linux) instead of `kill`.
 pub const INFO_PIDFD_MEMBERS: u32 = 2;
 
-/// What a child gets on one stdio slot.
+/// What a child gets on stdin or stderr (stdout is always a pipe).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Slot {
-    /// Unix `/dev/null`; Windows a null handle (stdin: end of input at once).
+    /// stdin only: end of input at once (Unix `/dev/null`; Windows a null handle).
     Null,
     /// A pipe end sent with the frame (Unix SCM_RIGHTS; Windows a handle value in `Spawn::handles`).
     Pipe,
@@ -43,11 +43,9 @@ pub struct Spawn {
     pub cwd: Vec<u8>,
     /// Terminal size (cols, rows) for a PTY root; the stdio slots are then ignored.
     pub pty: Option<(u16, u16)>,
-    /// stdin slot.
+    /// stdin: `Null` or `Pipe`.
     pub stdin: Slot,
-    /// stdout slot (never `Merge`).
-    pub stdout: Slot,
-    /// stderr slot.
+    /// stderr: `Pipe` or `Merge`.
     pub stderr: Slot,
     /// This tree's grace, used when the host dies.
     pub grace_ms: u32,
@@ -101,7 +99,7 @@ pub struct ProcEntry {
     pub pid: u32,
     /// Parent pid when the parent is in the same list.
     pub ppid: Option<u32>,
-    /// Executable file name without directory, UTF-8 (lossy on Windows).
+    /// Executable file name without directory, converted lossily to UTF-8 on every OS.
     pub name: Option<String>,
 }
 
@@ -171,9 +169,9 @@ pub enum Msg {
         id: u64,
         /// Root pid.
         pid: u32,
-        /// PTY ends. Windows: [output read, input write] handle values in the supervisor. Unix: [1, 0]
+        /// Terminal ends. Windows: [output read, input write] handle values in the supervisor. Unix: [1, 0]
         /// when the master travels with this frame, else [0, 0].
-        pty: [u64; 2],
+        pty_ends: [u64; 2],
     },
     /// supervisor → host: the tree did not start; nothing is left running.
     SpawnFailed {
@@ -199,10 +197,6 @@ pub enum Msg {
         req: u64,
         /// Tree id.
         id: u64,
-        /// Something was force-killed at the deadline.
-        forced: bool,
-        /// From `Stop` to gone.
-        elapsed_ms: u32,
     },
     /// supervisor → host: reply to `List` (empty once the tree is gone).
     Processes {

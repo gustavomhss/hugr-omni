@@ -1,6 +1,6 @@
 //! From a request to a launch spec: validation, program resolution and the final environment (W03).
 //!
-//! SEAM (frozen in W00): `Stdin`, `PtySize`, `Request`, `Mode`, `Spec` and `prepare`. Bodies and private items belong to W03.
+//! SEAM (frozen in W00): `Request`, `Mode`, `Spec` and `prepare`. Bodies and private items belong to W03.
 //! Everything here is pure: no process is started and nothing is executed (contract §3).
 
 mod env;
@@ -12,34 +12,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::error::Error;
+use crate::types::{PtySize, Stdin};
 
 /// Default `grace` (contract §5).
 pub(crate) const DEFAULT_GRACE: Duration = Duration::from_millis(2000);
-
-/// What a spawned pipe child gets on stdin (contract §9).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Stdin {
-    /// End of input at once (the default).
-    #[default]
-    Closed,
-    /// A pipe you write to with `write()` and close with `close_stdin()`.
-    Pipe,
-}
-
-/// Terminal size in character cells (contract §10). The default is 80 x 24.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PtySize {
-    /// Columns.
-    pub cols: u16,
-    /// Rows.
-    pub rows: u16,
-}
-
-impl Default for PtySize {
-    fn default() -> Self {
-        PtySize { cols: 80, rows: 24 }
-    }
-}
 
 /// Pipes or a terminal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,6 +37,8 @@ pub(crate) struct Request {
     pub stdin: Stdin,
     pub merge_stderr: bool,
     pub grace: Duration,
+    /// Validated here, enforced by `process`.
+    pub timeout: Option<Duration>,
 }
 
 impl Request {
@@ -75,6 +53,7 @@ impl Request {
             stdin: Stdin::Closed,
             merge_stderr: false,
             grace: DEFAULT_GRACE,
+            timeout: None,
         }
     }
 }
@@ -97,7 +76,7 @@ pub(crate) struct Spec {
     pub grace: Duration,
 }
 
-/// Validates `req` (InvalidArgument / InvalidCwd), builds the final environment and resolves the program
+/// Validates `req` per contract §3 (InvalidArgument / InvalidCwd), builds the final environment and resolves the program
 /// against the child's final PATH (NotFound / NotExecutable). Never starts or executes anything.
 pub(crate) fn prepare(req: &Request) -> Result<Spec, Error> {
     validate::check(req)?;

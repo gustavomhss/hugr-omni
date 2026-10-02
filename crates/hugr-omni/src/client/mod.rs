@@ -2,7 +2,7 @@
 //! restart by generation after supervisor death, creator-pid check, non-blocking bounded channel,
 //! pipe creation and descriptor transfer. W04.
 //!
-//! SEAM (frozen in W00): `spawn`, `Spawned`, `HostStdio`, `Pipe`, `Tree` and its methods, `Stopped`.
+//! SEAM (frozen in W00): `spawn`, `Spawned`, `HostStdio`, `Pipe`, `Tree` and its methods.
 //! Bodies and private items belong to W04. Every failure of the supervisor or the channel is `Io`;
 //! after one, every pending call of that generation fails and the next `spawn` starts a new supervisor.
 
@@ -41,18 +41,11 @@ pub(crate) struct Spawned {
     pub stdio: HostStdio,
 }
 
-/// The confirmation of `Tree::stop`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Stopped {
-    /// Something was still alive at the deadline and was force-killed.
-    pub forced: bool,
-    pub elapsed: Duration,
-}
-
 /// Starts `spec` through the supervisor (starting the supervisor first if needed). Blocks the calling
 /// thread for one round trip (like `std::process::Command::spawn`), bounded: a stalled supervisor yields
 /// `Io`, never a hang. Startup failures map to `NotFound` / `NotExecutable` / `InvalidCwd` / `Io`.
-/// A Unix PTY root is held before exec until `Tree::go`.
+/// A Unix PTY root is held before exec until `Tree::go`: the caller starts its reader on the terminal
+/// output first, then calls `go`, so `spawn_pty()` still reports exec failures synchronously.
 pub(crate) fn spawn(spec: &Spec) -> Result<Spawned, Error> {
     let _ = spec;
     Err(todo())
@@ -64,8 +57,9 @@ pub(crate) fn spawn(spec: &Spec) -> Result<Spawned, Error> {
 pub(crate) struct Tree {}
 
 impl Tree {
-    /// Unix PTY roots: lets the held root exec, once the host's reader runs. A no-op elsewhere.
-    pub(crate) async fn go(&self) -> Result<(), Error> {
+    /// Unix PTY roots: lets the held root exec, once the host's reader runs, and returns when exec
+    /// succeeded or failed (the second bounded round trip of a PTY spawn). A no-op elsewhere.
+    pub(crate) fn go(&self) -> Result<(), Error> {
         Err(todo())
     }
 
@@ -76,7 +70,7 @@ impl Tree {
 
     /// One deadline for the whole tree: graceful now, forced at `grace`; resolves once the tree is gone
     /// (at once if it already is). Overlapping calls share the earliest deadline (ADR-0005 R2).
-    pub(crate) async fn stop(&self, grace: Duration) -> Result<Stopped, Error> {
+    pub(crate) async fn stop(&self, grace: Duration) -> Result<(), Error> {
         let _ = grace;
         Err(todo())
     }
@@ -86,7 +80,8 @@ impl Tree {
         let _ = grace;
     }
 
-    /// Resizes the terminal; `Closed` after the root exited.
+    /// Resizes the terminal without waiting: `Closed` at once if the root's exit was already seen, else
+    /// `Resize` is sent and its `Ack` is not awaited (a resize racing the exit is harmless).
     pub(crate) fn resize(&self, cols: u16, rows: u16) -> Result<(), Error> {
         let _ = (cols, rows);
         Err(todo())
