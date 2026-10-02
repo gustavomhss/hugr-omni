@@ -5,7 +5,7 @@ scenarios and run through every language. The **KPIs** (K*) are measured by usin
 (see PLAN §4.2) and decide the release. Management items (G0/UX/REL/...) are judged by people.
 
 "3 OS" = Windows, macOS, Linux. "5 targets" = win-x64, darwin-arm64, darwin-x64, linux-x64, linux-arm64.
-Owner = the work package that turns the item green. Contract tests are read-only for implementers.
+Owner = the work package that turns the item green. Contract tests are read-only for implementers. The API they exercise is frozen in `docs/api-contract.md`.
 
 ## Contract (35)
 
@@ -14,16 +14,16 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-SPAWN-01 | A bare program name resolves against the child's final PATH on 3 OS, incl. Windows PATHEXT (`npm` → `npm.cmd`); with PATH removed/absent the error says so | W03 |
 | C-SPAWN-02 | Args (spaces, quotes, backslashes, empty, non-ASCII) arrive byte-identical, incl. `.cmd`/`.bat`; an arg that cannot be passed safely to a batch file → `INVALID_ARGUMENT`, nothing runs; shell metacharacters are never interpreted | W06 |
 | C-SPAWN-03 | A relative program path with a separator resolves against `cwd` (host cwd if none); a relative `cwd` resolves against the host cwd — identically on 3 OS | W03 |
-| C-ERR-01 | Missing program → `NOT_FOUND`; not executable → `NOT_EXECUTABLE`; bad cwd → `INVALID_CWD`; every message names the value and the fix, identical text in all languages | W03 |
+| C-ERR-01 | Errors per `docs/api-contract.md` §8 outcome table. Missing program → `NOT_FOUND`; not executable → `NOT_EXECUTABLE`; bad cwd → `INVALID_CWD`; every message names the value and the fix, identical text in all languages | W03 |
 | C-ERR-02 | Invalid inputs (negative/NaN durations, bad PTY size, negative limits, NUL bytes) → `INVALID_ARGUMENT` naming the field, before any process exists | W03 |
 | C-ENV-01 | `env` merges over the inherited env; `null` removes; clean-env gives only what was passed (+ documented OS-required vars on Windows); `PATH`/`Path` case-insensitive on Windows; non-ASCII round-trips | W03 |
-| C-IO-01 | stdout/stderr are separate live streams (delivered before exit); UTF-8 split across chunks decodes correctly; invalid UTF-8 → U+FFFD; bytes mode is exact | W10 |
-| C-IO-02 | The child never blocks on unread output: ≤ 1 MiB/stream buffered, the rest dropped and counted in `droppedBytes`; breaking out of the loop detaches; `wait()` with 50 MB unread completes; an attached slow consumer gets backpressure without loss | W10 |
-| C-IO-03 | `write`/`end` deliver exact bytes and EOF; writing after the child exited or closed stdin → `CLOSED`, host never crashes; pending writes settle on exit/kill/timeout/cancel | W10 |
-| C-IO-04 | Nothing written before exit is lost; if the root exits while a descendant holds the pipe, `wait()` resolves at root exit and `run()` returns within `graceMs` with what it read and kills the rest — never hangs | W10 |
-| C-RUN-01 | `run()` returns exitCode/stdout/stderr/success/reason (`success` ⇔ reason `exit` and code 0); `input` is fed then closed; without `input` stdin is closed (no hang); non-zero exit never throws; output above `maxOutputBytes` (default 16 MiB/stream) is cut, head kept, `truncated` true | W10 |
-| C-KILL-01 | `kill()` ends child, grandchildren and great-grandchildren — also when the root already exited and only descendants remain; once the tree is gone it is a no-op | W07 |
-| C-KILL-02 | `kill()` asks gracefully first; a cooperative child finishes cleanup; one that ignores it is forced after `graceMs` (per-OS tier in GUARANTEES) | W07 |
+| C-IO-01 | stdout/stderr are separate live streams (delivered before exit); `mergeStderr` gives one OS-level chronological stream; UTF-8 split across chunks decodes correctly; invalid UTF-8 → U+FFFD; bytes mode is exact; `lines()` splits, keeps the final unterminated line, and marks pieces of >1 MiB lines with `continues` | W10 |
+| C-IO-02 | The child never blocks on output: up to 16 MiB/stream buffered for an attached consumer, 1 MiB with none, the rest dropped and counted in `droppedBytes`; loss is reported in order (`lostBefore`, incl. a final item before EOF) with decoding/line assembly restarting at gaps; single consumer (second claim → `INVALID_ARGUMENT`), break detaches; `wait()`/`stop()` complete with a paused consumer and 50 MB unread | W10 |
+| C-IO-03 | `write` resolves when the pipe accepted the bytes, in call order; `closeStdin` flushes then closes, idempotent; spawn stdin is closed by default (`write` → `INVALID_ARGUMENT`); writing after close/exit → `CLOSED`, host never crashes; pending writes settle on exit/stop/timeout/cancel | W10 |
+| C-IO-04 | Nothing written before exit is lost; if the root exits while a descendant holds the pipe, `wait()` resolves at root exit, `output` stays open until the descendant closes or `stop()`, and `run()` returns within `graceMs` with what it read and stops the rest — never hangs | W10 |
+| C-RUN-01 | `run()` returns exitCode/stdout/stderr/success/reason (`success` ⇔ reason `exit` and code 0); a resolved result is always complete — above `maxOutputBytes` (default 16 MiB/stream) the tree is stopped and it rejects `OUTPUT_LIMIT` with the first bytes in `error.result`; `input` is fed then closed, without it stdin is closed; a timeout after the root exited still yields `reason: "timeout"`; non-zero exit never throws | W10 |
+| C-KILL-01 | `stop()` ends child, grandchildren and great-grandchildren — also after `wait()` resolved and only descendants remain (root `Exit` unchanged); once the tree is gone it is a no-op | W07 |
+| C-KILL-02 | `stop()` asks gracefully first with one deadline for the whole tree; a cooperative child finishes cleanup; one that ignores it is forced after `graceMs` (per-OS tier in GUARANTEES) | W07 |
 | C-KILL-03 | A descendant that deliberately escapes (setsid / job breakaway) behaves exactly as GUARANTEES declares per OS | W07 |
 | C-EXIT-01 | Exit codes 0/1/42/255 and Windows codes > 255 (e.g. `0xC000013A`) are reported as the same non-negative integer in all languages; `reason` is `exit`/`signal`/`killed`/`timeout`/`aborted` with the documented precedence | W07 |
 | C-SCOPE-01 | Leaving scope kills the tree: TS `await using`, Python `with`/`async with`, Rust drop | W07 |
@@ -32,15 +32,15 @@ Owner = the work package that turns the item green. Contract tests are read-only
 | C-HOST-01 | Rust host: main return, `process::exit`, uncaught panic, SIGINT/SIGTERM and hard kill leave trees as GUARANTEES declares per OS | W09 |
 | C-RS-01 | Rust idioms: `#[non_exhaustive]` `Error` with `code()`, `CancellationToken`, drop kills, the tokio executor is never blocked | W09 |
 | C-RS-02 | Every contract scenario passes through the Rust API on 5 targets | W09 |
-| C-PTY-01 | With `pty` the child sees a terminal of the requested size; `resize` updates it; invalid size or non-PTY child → `INVALID_ARGUMENT`; resize after close → `CLOSED` | W12 |
+| C-PTY-01 | With `pty` the child sees a terminal of the requested size (default 80x24); `resize` (PtyChild only) updates it; invalid size → `INVALID_ARGUMENT`; resize after exit → `CLOSED`; `run()` with `pty` + `input` → `INVALID_ARGUMENT`; in `run()` pty output lands in `stdout`, `stderr` empty | W12 |
 | C-PTY-02 | Interactive exchange works (prompt → typed answer → reply) and `\x03` interrupts the foreground program on 3 OS | W12 |
 | C-PTY-03 | PTY output is UTF-8 safe, nothing printed before exit is lost, and the stream ends when the child exits — no hang, incl. Windows ConPTY | W12 |
-| C-PTY-04 | `kill()` on a PTY process ends its whole tree on 3 OS | W12 |
-| C-TS-01 | TS idioms and host: `for await`, `await using`, `AbortSignal`, `OmniError.code`, zero `any` in the d.ts; a live Child keeps the event loop alive; GC never kills a child; normal end / `process.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES on Node, Bun, Deno | W13 |
+| C-PTY-04 | `stop()` on a PTY process ends its whole tree on 3 OS | W12 |
+| C-TS-01 | TS idioms and host: `for await`, `await using` (awaits `stop()`), `AbortSignal`, `OmniError.code`, `PipeChild`/`PtyChild` overloads, zero `any` in the d.ts; a live Child keeps the event loop alive; GC never kills a child; normal end / `process.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES on Node, Bun, Deno | W13 |
 | C-TS-02 | Every contract scenario passes through TS on Node 22/24 (5 targets), Bun and Deno (3 OS) | W13 |
 | C-PY-01 (v0.2) | Python idioms and host: `with`/`async with`, KeyboardInterrupt and task cancel kill and re-raise, `CommandNotFoundError` is a `FileNotFoundError`, `.pyi` clean under `pyright --strict`, waits release the GIL; normal end / `sys.exit()` / uncaught exception / SIGINT / SIGTERM / hard kill behave per GUARANTEES | W15 |
 | C-PY-02 (v0.2) | Every contract scenario passes through Python sync and asyncio on CPython 3.10 and 3.14, 5 targets | W15 |
-| C-PAR-01 (v0.2) | The glossary has ≤ 16 concepts and none of the excluded capabilities; every public function, option and result field of each language maps to it, and each concept exists in all 3 languages; CI fails on drift | W18 |
+| C-PAR-01 (v0.2) | The glossary (`docs/api-contract.md` §2) has ≤ 15 concepts and none of the excluded capabilities; every public function, option and result field of each language maps to it, and each concept exists in all 3 languages; CI fails on drift | W18 |
 | C-ARC-01 | All process semantics live in the Rust core; TS loads it via Node-API, Python via a CPython extension; binding sources never spawn/signal processes or implement timeouts | W18 |
 | C-GUA-01 | Every GUARANTEES row has per-OS status and links the scenario or KPI that proves it; CI fails on a missing link | W18 |
 | C-DOC-01 | The root README and guide lead with TypeScript (Python and Rust as equals); each language quickstart ≤ 10 lines; every README code block runs in CI on 3 OS | W18 |

@@ -28,12 +28,13 @@
 | D2 | Repo | ✅ `gmhelmold/hugr-omni`, público (transferido da HuGR-Labs, cujo Actions estava travado por billing) |
 | D3 | Pasta local | ✅ `~/Documents/HuGR/hugr-omni` |
 | D4 | Licença | ✅ MIT OR Apache-2.0 |
-| D5 | **Aprovar o contrato da API (seção 3)** | ⏳ pendente: bloqueia o W00, não bloqueia a Fase 0 |
+| D5 | Contrato da API | ✅ aprovado e congelado pelo lead (2026-10-02): `docs/api-contract.md` |
 | D6 | Estratégia de testes: contrato enxuto + QA com KPIs | ✅ diretriz do Owner (2026-10-01) |
 | D7 | PRs em bundle para economizar CI | ✅ diretriz do Owner (2026-10-01) |
 | D9 | G0: núcleo próprio enxuto, TS primeiro (opção B; `docs/decisions/G0.md`) | ✅ assinado pelo Owner (2026-10-01) |
 | D10 | Linguagens: TypeScript (Node/Bun/Deno) no v0.1; Python e Rust (pacotes publicados) no v0.2 | ✅ Owner (2026-10-01) |
 | D11 | CI funcionando | ✅ repo transferido para `gmhelmold` (2026-10-02); jobs voltaram a rodar nos 5 alvos |
+| D12 | Papéis: o usuário é **stakeholder**; o lead aprova as decisões técnicas (contrato, gates, merges, go/no-go técnico) | ✅ diretriz do stakeholder (2026-10-02) |
 | D8 | Monolito modular + god-file guard (400 ideal · 600 ok · 650 máximo por arquivo de código; não vale para documentos; é por arquivo, não por PR) | ✅ diretriz do Owner (2026-10-01) |
 
 Também ficam com você, em paralelo e sem bloquear o build:
@@ -68,102 +69,21 @@ Também ficam com você, em paralelo e sem bloquear o build:
 
 ---
 
-## 3. Contrato da API (proposta: aprovar = D5)
+## 3. Contrato da API
 
-### TypeScript (interface principal: Node, Bun, Deno)
+**Fonte única: [`docs/api-contract.md`](docs/api-contract.md)** (em inglês, congelado para o v0.1 em 2026-10-02 pelo lead, depois de 3 rodadas de revisão fria do Codex). Este plano não repete o contrato, para não haver duas versões que divergem.
 
-```ts
-import { run, spawn } from "hugr-omni";
-
-// 1. Rodar e coletar: o caso mais comum
-const r = await run("npm", ["test"], { cwd: repo, timeoutMs: 120_000 });
-if (!r.success) console.log(r.reason, r.exitCode, r.stderr);
-
-// 2. Streaming + cleanup garantido ao sair do escopo
-{
-  await using dev = spawn("npm", ["run", "dev"]);
-  for await (const { stream, data } of dev.output) {
-    if (data.includes("ready")) break;   // parar de ler nunca trava o processo
-  }
-} // aqui npm, node e tudo que eles abriram já morreram
-
-// 3. Terminal interativo
-const sh = spawn("bash", [], { pty: { cols: 120, rows: 30 } });
-await sh.write("ls\n");
-sh.resize(100, 40);
-const exit = await sh.kill();             // pede com educação, força após graceMs
-```
-
-### Python (sync e asyncio)
-
-```python
-from hugr_omni import run, spawn, aio
-
-r = run(["npm", "test"], cwd=repo, timeout=120)
-if not r.success:
-    print(r.reason, r.exit_code, r.stderr)
-
-with spawn(["npm", "run", "dev"]) as dev:
-    for chunk in dev.output:
-        if "ready" in chunk.data:
-            break
-# saiu do with: árvore inteira morta
-
-r = await aio.run(["pytest"], timeout=300)
-```
-
-### Rust (tokio)
-
-```rust
-use hugr_omni::Command;
-let r = Command::new("npm").arg("test").cwd(repo)
-    .timeout(Duration::from_secs(120)).run().await?;
-let mut dev = Command::new("npm").args(["run", "dev"]).spawn()?;
-while let Some(chunk) = dev.output_text().next().await { /* ... */ }
-drop(dev); // mata a árvore
-```
-
-### Glossário (16 conceitos; mudar exige aprovação do Owner; paridade verificada por máquina)
-
-| Conceito | TS | Python | Rust |
-|---|---|---|---|
-| rodar e coletar | `run(cmd, args, opts)` | `run([cmd, *args], **kw)` / `aio.run` | `Command::run()` |
-| rodar com streaming | `spawn(...)` → `Child` | `spawn(...)` / `aio.spawn` | `Command::spawn()` |
-| diretório | `cwd` | `cwd` | `.cwd()` |
-| ambiente (merge sobre o herdado; `null` remove) | `env` | `env` | `.env()` / `.env_remove()` |
-| ambiente limpo | `inheritEnv: false` | `inherit_env=False` | `.env_clear()` |
-| terminal | `pty: true \| {cols, rows}` | `pty=True \| (cols, rows)` | `.pty(PtySize)` |
-| timeout | `timeoutMs` | `timeout` (s) | `.timeout(Duration)` |
-| graça do kill | `graceMs` (2000) | `grace` (2.0) | `.grace(Duration)` |
-| cancelamento | `signal: AbortSignal` | cancelar a task / `KeyboardInterrupt` | `.cancel_on(CancellationToken)` |
-| stdin do `run` | `input` | `input` | `.input()` |
-| limite de saída do `run` | `maxOutputBytes` (16 MiB/stream) | `max_output_bytes` | `.max_output_bytes()` |
-| texto vs bytes | `encoding: "utf8" \| "bytes"` | `text=True \| False` | `output_text()` / `output()` |
-| Child | `pid · output · write · end · resize · kill · wait · droppedBytes` | idem, em snake_case | idem |
-| Exit | `exitCode · signal · reason · success` | `exit_code · signal · reason · success` | `Exit` |
-| RunResult | Exit + `stdout · stderr · truncated` | idem | `RunOutput` |
-| erro | `OmniError` com `.code` | `OmniError` + subclasses (`CommandNotFoundError` também é `FileNotFoundError`) | `Error` `#[non_exhaustive]` |
-
-**Códigos de erro:** `NOT_FOUND · NOT_EXECUTABLE · INVALID_CWD · INVALID_ARGUMENT · ABORTED · CLOSED · IO`. A Fase 2 acrescenta `SANDBOX_UNAVAILABLE`.
-
-**`reason`:**
-- `exit`: o processo terminou sozinho;
-- `signal`: foi morto por fora (Unix);
-- `killed`, `timeout`, `aborted`: fomos nós que matamos.
-
-Numa corrida entre eventos, ganha o que aconteceu primeiro. No Windows, códigos de saída acima de 255 (por exemplo `0xC000013A`) aparecem como inteiro não negativo em todas as linguagens.
-
-**Defaults seguros:**
-- `run()` entrega stdin fechado: um programa que espera input recebe EOF em vez de travar o agente.
-- `env` faz merge sobre o ambiente herdado.
-- A busca do programa usa o PATH final do filho.
-- `kill()` sempre mata a árvore: gracioso primeiro, força depois de `graceMs`.
-- Sair do escopo mata a árvore.
-- O GC nunca mata um processo vivo. Quando o host sai, ele mata o que sobrou, netos órfãos incluídos (os níveis de garantia estão no GUARANTEES).
-- Em TS, um `Child` vivo mantém o event loop vivo, como o `child_process`.
-- Saída não lida fica num buffer de até 1 MiB por stream; o excedente é descartado e contado em `droppedBytes`. O filho **nunca** trava porque ninguém está lendo.
-- Se a raiz sai mas um descendente segura o pipe, `run()` devolve o que tiver lido em até `graceMs` e mata o resto. Para processos de fundo de longa duração, use `spawn()`.
-- Nunca há shell.
+Resumo do que ficou decidido:
+- `run()` para o caso de 80%. Quando resolve, a saída é sempre completa; se passar do limite, rejeita com `OUTPUT_LIMIT` e devolve o parcial.
+- `spawn()` para streaming e interação, devolvendo `PipeChild` ou `PtyChild`.
+- `stop()` (não `kill()`) encerra a árvore inteira com um prazo único (`graceMs`).
+- O filho nunca trava por causa da saída: há buffer limitado, e a perda é avisada em ordem (`lostBefore`).
+- `wait()` diz respeito só à raiz; o `RunResult` descreve a execução inteira.
+- stdin do `spawn` fechado por padrão; `closeStdin()` existe só sem PTY; `run()` com PTY não aceita `input`.
+- `lines()`, `mergeStderr`, `text: true|false`.
+- Uma tabela de resultados para cada situação: falha ao iniciar, cancelamento, timeout, limite, exit ≠ 0, erro de I/O.
+- `.cmd`/`.bat` no Windows rodam via `cmd.exe` com escaping seguro, ou são recusados.
+- O glossário tem **15 conceitos**.
 
 ### Arquitetura interna (monolito modular)
 
@@ -282,7 +202,7 @@ Windows em runtime e os alvos arm64 são provados no CI do bundle. Uma falha lá
 | **Lead** (sessão principal) | decide, congela o contrato, escreve briefs, verifica, integra bundles, roda o QA, mantém este plano | não implementa WP de produto; não aceita relato sem verificar |
 | **Agentes Claude** | executam 1 WP cada, em worktree isolada | não decidem interface, não saem do write-set, não abrem PR, não mergeiam |
 | **Codex** | revisa cada WP contra o card; revisa cada bundle nos seams; red team da sandbox | não escreve código de produto |
-| **Owner** | D5, conversas, G0, publicação | — |
+| **Stakeholder** (o usuário) | direção do produto, conversas com maintainers, aprovar publicação e mensagens externas em seu nome, waivers de rigor | aprovar decisões técnicas (isso é do lead) |
 
 **Modelos:**
 - **Opus:** WPs com OS nativo, concorrência ou FFI (S1, S2, W01, W03, W05, W06, W07, W09, W10, W12, W12w, W13, W15, Q1, S4, SB2–SB4, SB6).
@@ -348,7 +268,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 
 #### H0 · Owner: decisões, conversas, aprovações
 - **Quem:** você · **Depende:** — · **Escreve:** `docs/research/conversations.md`, `docs/partners/**`
-- **Completude:** G0-05, UX-02 (D5), REL-02.
+- **Completude:** G0-05, REL-02. (UX-02 passou para o lead: D5/D12.)
 - **Sucesso:** ≥5 conversas com dor, workaround, disposição de trocar e bloqueios; ≥2 partners em linguagens diferentes.
 - **Invariantes:** nenhum dado pessoal além do nome do projeto.
 - **Qualidade:** cada partner com medida antes/depois (código de plataforma removido, repros de bugs de Windows).
@@ -501,7 +421,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 #### W07 · Child: kill de árvore e saída
 - **Agente:** Opus · **Depende:** W05, W06 · **Escreve:** `crates/hugr-omni/src/process/{tree,exit}.rs`
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-SCOPE-01.
-- **Sucesso:** depois de `kill()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
+- **Sucesso:** depois de `stop()` nada sobra, mesmo que a raiz já tenha morrido e só restem netos.
 - **Invariantes:** `kill` idempotente; `drop` não bloqueia; `wait` tem uma fonte única de verdade; `Exit` vem de uma função pura.
 - **Qualidade:** zero `cfg`; a precedência de `reason` documentada no código.
 - **DoD:** QA rápido local com K1 = 0; mutation probe do lead removendo a etapa de força.
@@ -803,5 +723,6 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-01 · Owner: repo `HuGR-Labs/hugr-omni`, público; nome `hugr-omni`.
 - 2026-10-01 · R1 encontrou o `processkit` (Rust 3.3.4 + processkit-py 1.5.0, MIT), com 81,8% de cobertura nos 3 OS em 2 linguagens, o que dispara o nosso critério de parada. Owner: **pivotar** para hugr-omni = pacote TypeScript (Node/Bun/Deno) sobre o processkit, mais a camada de sandbox depois. **Condição do Owner:** não confiar no README; o pivô só se confirma com a avaliação prática (E1, KPIs nos 3 OS) e a auditoria independente do código (Codex). Até lá, S1/S2 ficam pausados. Sinais medidos no fonte v3.3.4: `src` com ~86 mil linhas em 58 arquivos (28 acima de 650 linhas), 308 ocorrências de `unsafe`, CI em 5 SOs, criado em 2026-05-31, 55 versões, um autor principal.
 - 2026-10-01 · **G0 assinado: opção B.** A evidência medida (fit: 1 de 24 itens como está; perda silenciosa de saída; travamento sob Node/Bun no Linux sem pidfd; churn alto) mostrou que construir em cima do processkit nos faria reescrever I/O, timers, motivos, saída do host e o wait, mantendo uma dependência de 86 mil linhas. O processkit fica como **referência** (MIT): reaproveitamos técnicas (filho suspenso → Job → resume; cgroup v2 quando delegado), sem dependência de código. Linguagens: TS no v0.1; Python e Rust no v0.2. S1/S2 retomam assim que o billing do Actions for destravado (precisam de Windows).
+- 2026-10-02 · Stakeholder: "quem aprova é você" → o lead aprova as decisões técnicas (D12). Contrato da API revisado pelo Codex em 3 rodadas (rework → rework → freeze_after_fixes); as decisões estão em `docs/api-contract.md`: `stop()` no lugar de `kill()`, stdin fechado por padrão, saída sempre drenada com perda avisada em ordem, `run()` completo ou `OUTPUT_LIMIT`, `RunResult` descreve a execução inteira, `lines()` e `mergeStderr`, `.cmd` via `cmd.exe` com escaping seguro. Congelado (D5).
 - 2026-10-02 · Owner: repo transferido de `HuGR-Labs` para `gmhelmold` porque o Actions da org estava travado por billing ("account is locked due to a billing issue"); o GitHub mantém redirect do endereço antigo.
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).
