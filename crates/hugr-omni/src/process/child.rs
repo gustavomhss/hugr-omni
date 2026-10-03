@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use tokio::runtime::Handle;
 
-use super::Options;
 use super::life::{self, Life};
+use super::{Options, deadline};
 use crate::client::{self, HostStdio, Spawned};
 use crate::error::Error;
 use crate::io::{Lines, Output, Pumps, Source, Stdin};
@@ -212,16 +212,20 @@ pub(crate) fn spawn_pipe(req: &Request, opts: &Options) -> Result<PipeChild, Err
         return Err(Error::pty_needs_spawn_pty());
     }
     let spec = spawn::prepare(req)?;
+    deadline::refuse_if_cancelled(opts)?;
     let rt = client::runtime()?;
     let spawned = client::spawn(&spec)?;
     let child = Child::start(rt.handle(), spawned, opts.text, spec.grace)?;
+    deadline::arm(rt.handle(), &child.inner, req.timeout, opts.cancel.clone());
     Ok(PipeChild { child })
 }
 
 /// Starts a terminal child.
 pub(crate) fn spawn_pty(req: &Request, opts: &Options) -> Result<PtyChild, Error> {
-    let _ = opts;
     // Contract §3: invalid input is refused as such before anything else, also while terminals are missing.
     spawn::prepare(req)?;
+    deadline::refuse_if_cancelled(opts)?;
+    // W12: once the child is started, `deadline::arm(rt, &child.inner, req.timeout, opts.cancel.clone())`, as in
+    // `spawn_pipe`.
     Err(Error::terminal_unsupported())
 }
