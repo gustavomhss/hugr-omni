@@ -142,7 +142,8 @@ Exit / RunResult · OmniError.
 ## 6. `run()`
 
 - Resolves after the root exits **and** the output ends. Once the root exits, descendants get `graceMs` to
-  close the pipes; then the remaining tree is stopped and the output collected so far is the result. A timeout
+  close the pipes; then the remaining tree is stopped at once (that window was its grace) and the output collected
+  so far is the result. A timeout
   or cancellation during that window stops the tree at once. Long-lived background processes belong in
   `spawn()`.
 - **`RunResult` describes the run, not only the root.** If the deadline expires at any point before `run()`
