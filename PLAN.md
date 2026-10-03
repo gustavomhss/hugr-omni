@@ -1,6 +1,6 @@
 # hugr-omni — Plano de execução
 
-> Status: **G0 assinado (B)** · contrato congelado (D5) · primeira onda (W00, W01, W03–W06) na `main` (PR #4) · segunda onda (W02, W07, W10, W12w) no `bundle/B3` · 2026-10-02
+> Status: **G0 assinado (B)** · contrato congelado (D5) · primeira onda (W00, W01, W03–W06) na `main` (PR #4) · segunda onda (W02, W07, W10, W12w) no `bundle/B3`; W09 e W12 em execução · 2026-10-02
 > Repo: `gusmhs/hugr-omni` (público) · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
@@ -649,6 +649,8 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 | W06 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe do quoting vermelho no Windows) | `031eb1b` | SUP-W + C-SPAWN-02 verdes em Server 2025 (26100) e 2022 (20348) |
 | W04 | **no `bundle/B2`** (Codex: aprovado na rodada 4; probe `bInheritHandles=1` vermelho no Windows) | `ac5c023` | PROTO-01 verde em macOS, Linux e Windows; a prova do lead "matar o supervisor durante um flood" com o supervisor real fica para quando o W05 entrar |
 | W05 | **no `bundle/B2`** (Codex: aprovado na rodada 6; probe sessão→grupo vermelho; o gate a frio sob carga achou a corrida de membro saindo no macOS, corrigida) | `a44901c` | SUP-U verde em macOS (também sob carga), Linux --privileged e musl estático |
+| W10 | **no `bundle/B3`** (Codex: aprovado na rodada 3; 5 furos de perda corrigidos) | `bc08537` | C-IO-02/03 verdes no contrato; QA-D local: flood de 50 MiB = 16 recebidos + 34 descartados e contados, stdin 10 MiB idêntico, pipe herdado termina quando o dono fecha; K2 = K5 = 0 |
+| W07 | **no `bundle/B3`** (Codex: aprovado na rodada 2; probes: etapa de força removida e `Child::drop` vazio, vermelhos) | `3876315` | C-KILL-01/02/03, C-PROC-01 e C-SCOPE-01 verdes; contrato 12 passed / 24 pending no macOS; frios verdes no macOS e no Linux (Docker) |
 | W02 | **no `bundle/B3`** (Codex: aprovado na rodada 3; probe do matcher frouxo vermelho no teeth) | `02ed8f5` | runner TS sem framework: 37 cenários no macOS/Linux, 39 no Windows; teeth 29/29 em Node e Bun; idiomas do C-TS-01 (com ciclo de vida do host) vermelhos até o W13; Deno não rodado localmente |
 | W12w | **no `bundle/B3`** (Codex: aprovado na rodada 2; probe do fechamento síncrono vermelho no 20348 e verde no 26100, como previsto) | `9f6c403` | PTYSYS-W verde em 26100 e 20348 (run 37067122812): escritor teimoso parado em 1005–1025 ms com graça de 1000; 200 sessões sem perda; vazamento de handle 0/sessão no 26100 e 1/sessão no 20348 (declarado no GUARANTEES) |
 | W01 | **no `bundle/B2`** (Codex: aprovado na rodada 5; mutantes da referência pegos pelo lead) | `0a453ef` | fixture + 43 cenários + runner Rust; linha base `contract: 0 passed, 36 pending, 0 failed` em macOS e Linux |

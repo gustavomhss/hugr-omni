@@ -64,17 +64,14 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Docker Desktop: subir com `open -a Docker` se cair; cada agente usa o próprio volume `omni-target-<WP>`.
 - O material para investidores está fora do repo: `~/Documents/HuGR/omni-investidores.html`.
 
-## Estado em 2026-10-02 (fim da sessão, limite de uso)
+## Estado em 2026-10-03
 
-- `bundle/B3` (`bc08537`+): W12w, W02 e W10 entraram (Codex aprovou os três; probes do lead vermelhos; Windows CI
-  verde nos 2 builds para o W12w; Linux Docker verde em `bc08537`).
-- W07: ENTROU (`bundle/B3`), com o C-SCOPE-01 e o ledger atualizado; o resto desta linha é histórico. Antes:
-  aprovado pelo Codex (r2). O agente está juntando a `bundle/B3` na `wp/W07` e adicionando o teste do
-  C-SCOPE-01 (drop pela API pública, inclusive após o runtime do chamador fechar). Commit só local, na worktree
-  `.claude/worktrees/agent-aee3e7db1154947a3`. Para entrar: push da `wp/W07`; contrato no macOS; probe do lead
-  (esvaziar `Child::drop` → C-SCOPE-01 vermelho); squash; tirar do `conformance/pending.txt`: C-IO-02, C-IO-03,
-  C-KILL-01, C-KILL-02, C-KILL-03, C-PROC-01.
-- Depois: congelar em `process/deadline.rs` o seam `refuse_if_cancelled(opts)` e `arm(inner, timeout, cancel)`, chamados
-  em `spawn_pipe`/`spawn_pty`; despachar W09 (deadline.rs, run.rs; `run()` nunca descarta o future do `collect`) e
-  W12 (pty_unix, pty, `spawn_pty`/`PtyChild::resize`).
-- Os agentes não conseguem dar push (o classificador de permissões bloqueia); o lead faz o push com o "sim" do usuário.
+- `bundle/B3` tem a segunda onda inteira: W12w, W02, W10, W07 (frios verdes no macOS e no Linux em `3876315`;
+  Windows CI verde para o W12w). Ledger: saíram C-IO-02, C-IO-03, C-KILL-01, C-KILL-02, C-KILL-03, C-PROC-01.
+- Seam `deadline::{refuse_if_cancelled, arm}` congelado (`2899b13`) e já chamado por `spawn_pipe`/`spawn_pty`.
+- Em execução (baseline `409cdac`, só commit local): W09 (deadline.rs, run.rs; C-TMO-01/02, C-HOST-01, C-RS-01/02) e
+  W12 (pty_unix, pty, `spawn_pty`/`PtyChild::resize`; PTYSYS-U, C-PTY-01..04). Briefs em
+  `~/Documents/HuGR/hugr-omni-reviews/briefs/W09.brief.txt` e `W12.brief.txt`.
+- Fluxo por entrega: push da `wp/<id>` pelo lead → L0 → leitura → Codex (`scripts/review-prompt.py`) → probe do lead →
+  frios (macOS; Linux no Docker `--privileged`; `windows.yml` se tocar Windows) → squash na `bundle/B3` → ledger.
+- Depois do W09 e do W12: PR da `bundle/B3` para a `main`, CI completo, merge. Então W13 (binding Node).
