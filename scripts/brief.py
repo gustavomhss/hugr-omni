@@ -11,7 +11,6 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PUSH = "git push"
 
 
 def main() -> None:
@@ -30,10 +29,8 @@ def main() -> None:
     print(f"""WP {wp} — {title}
 STEP 0  In your worktree run `git fetch -q origin && git switch -c wp/{wp} {base}` FIRST (worktrees may start elsewhere),
         then `git merge-base --is-ancestor {base} HEAD` (abort if it fails). Echo BASELINE_VERIFIED {base}.
-PUSH    on the first commit that compiles, and early and often after that (wp/* never runs CI):
-        {PUSH} -u origin wp/{wp}
-        Never switch the active gh account or change any global git/gh config. For gh commands pass
-        -R gusmhs/hugr-omni.
+COMMIT  locally on wp/{wp}, early and often. Do not push and do not run Docker: the lead pushes, runs the Linux
+        cold gate and dispatches windows.yml. Never switch the active gh account or change any global git/gh config.
 READ    AGENTS.md (binding) · your card below · docs/api-contract.md · docs/adr/0005-supervisor.md · docs/protocol.md ·
         conformance/SPEC.md · conformance/FIXTURE.md · GUARANTEES.md · the seam files you call or implement.
 CARD    (the axioms an independent Codex review judges you against, field by field):
@@ -51,12 +48,10 @@ TRAPS   never `git add -A`; stage by name; `git diff --name-only {base}...HEAD` 
         never open a PR or merge. Disk is limited: delete your worktree's target/ and Docker volumes when you stop.
 GATES   python3 scripts/file-size-guard.py · cargo fmt --all -- --check · cargo clippy --workspace --all-targets -- -D warnings ·
         cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings ·
-        cargo build --workspace --bins && cargo test --workspace --no-fail-fast ·
-        Linux: docker run --rm --privileged -v "$PWD":/w -w /w -v omni-cargo:/usr/local/cargo/registry
-          -v omni-target-{wp}:/w/target -v omni-rustup:/usr/local/rustup rust:1.96 bash -c 'cargo build --workspace --bins && cargo test --workspace --no-fail-fast'
-STOP    at "branch wp/{wp} pushed, green locally, waiting for the lead".
+        cargo build --workspace --bins && cargo test --workspace --no-fail-fast (macOS)
+STOP    at "branch wp/{wp} committed locally, green on macOS, waiting for the lead".
 RETURN  (exactly this):
-  WP {wp} · branch wp/{wp} · head <sha> · BASELINE_VERIFIED <sha>
+  WP {wp} · branch wp/{wp} · head <sha> · worktree <path> · BASELINE_VERIFIED <sha>
   ITEMS    <id> green [macos|linux|win-compile|win-runtime] ... (or what is red and why)
   GATES    <cmd> → <last line>
   PROBES   <the mutations you ran and which test went red>
