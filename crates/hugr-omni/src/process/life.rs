@@ -83,6 +83,17 @@ impl Life {
         }
     }
 
+    /// A held Unix PTY root may exec now: call it once the terminal's reader runs (ADR-0005 R9). Returns when the exec
+    /// succeeded or failed; a no-op for every other tree.
+    pub(super) fn go(&self) -> Result<(), Error> {
+        self.tree.go()
+    }
+
+    /// Resizes the terminal without waiting; `Closed` once the root's exit is known.
+    pub(super) fn resize(&self, cols: u16, rows: u16) -> Result<(), Error> {
+        self.tree.resize(cols, rows)
+    }
+
     /// The live members `stop` would end now (the supervisor sets `parent_pid` only when the parent is listed).
     pub(super) async fn processes(&self) -> Result<Vec<ProcessInfo>, Error> {
         let list = self.tree.processes().await?;

@@ -194,8 +194,14 @@ pub struct PtyChild {
 impl PtyChild {
     /// Resizes the terminal; `Closed` after exit, `InvalidArgument` for a zero size (contract §10).
     pub fn resize(&self, size: PtySize) -> Result<(), Error> {
-        let _ = size;
-        Err(Error::terminal_unsupported())
+        // The range of contract §3, which `spawn::prepare` checks at the start.
+        const MAX_CELLS: u16 = 32767;
+        for (field, cells) in [("cols", size.cols), ("rows", size.rows)] {
+            if !(1..=MAX_CELLS).contains(&cells) {
+                return Err(Error::bad_pty_size(field, cells));
+            }
+        }
+        self.child.inner.life.resize(size.cols, size.rows)
     }
 }
 
@@ -222,10 +228,15 @@ pub(crate) fn spawn_pipe(req: &Request, opts: &Options) -> Result<PipeChild, Err
 
 /// Starts a terminal child.
 pub(crate) fn spawn_pty(req: &Request, opts: &Options) -> Result<PtyChild, Error> {
-    // Contract §3: invalid input is refused as such before anything else, also while terminals are missing.
-    spawn::prepare(req)?;
+    let spec = spawn::prepare(req)?;
     deadline::refuse_if_cancelled(opts)?;
-    // W12: once the child is started, `deadline::arm(rt, &child.inner, req.timeout, opts.cancel.clone())`, as in
-    // `spawn_pipe`.
-    Err(Error::terminal_unsupported())
+    let rt = client::runtime()?;
+    let spawned = client::spawn(&spec)?;
+    // `start` returns with the terminal's reader running (`io::Pumps::start`); only then may the held Unix root exec
+    // (ADR-0005 R9), or a program that prints and exits at once can lose its output on macOS. An exec failure comes
+    // back here; dropping `child` then ends the tree and lets the readers go.
+    let child = Child::start(rt.handle(), spawned, opts.text, spec.grace)?;
+    child.inner.life.go()?;
+    deadline::arm(rt.handle(), &child.inner, req.timeout, opts.cancel.clone());
+    Ok(PtyChild { child })
 }
