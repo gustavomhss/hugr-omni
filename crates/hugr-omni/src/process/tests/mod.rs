@@ -192,7 +192,9 @@ fn ps(pid: u32) -> bool {
     }
 }
 
-/// Windows: `tasklist` lists `"<image>","<pid>",...`, or only an INFO line when no process has that pid.
+/// Windows: `tasklist` lists `"<image>","<pid>",...`, or only an INFO line when no process has that pid. Windows
+/// hands a freed pid out again within moments (to `tasklist` itself, among others), so a pid only counts as alive
+/// while it is still an `omni-fixture`: every pid these tests check is one.
 fn tasklist(pid: u32) -> bool {
     let out = Command::new("tasklist")
         .args(["/FI", &format!("PID eq {pid}"), "/NH", "/FO", "CSV"])
@@ -200,7 +202,9 @@ fn tasklist(pid: u32) -> bool {
         .expect("tasklist");
     let text = String::from_utf8_lossy(&out.stdout);
     if text.contains(&format!("\"{pid}\"")) {
-        true
+        text.trim_start()
+            .to_ascii_lowercase()
+            .starts_with("\"omni-fixture.exe\"")
     } else if out.status.success() && text.contains("INFO:") {
         false
     } else {
