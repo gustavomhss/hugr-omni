@@ -466,6 +466,15 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** 3 pipelines Windows verdes seguidos (o lead dispara); o Codex revisa a mudança.
 - **Não fazer:** mexer no `pty_windows` ou fora do supervisor.
 
+#### W18b · Atritos do Q2 (docs e tipagem)
+- **Agente:** Sonnet · **Depende:** W18, Q2 · **Escreve:** `README.md`, `bindings/node/README.md`, `docs/guide/**`, `bindings/node/index.d.ts` (só a tipagem do resultado por `text`, decisão do lead), `bindings/node/test/overloads.ts`
+- **Completude:** os atritos da tabela de `docs/ux/Q2-cold-users-v0.1.md`.
+- **Sucesso:** um usuário novo acha `env`, `inheritEnv`, `cwd`, `stdin`, `mergeStderr`, a leitura do resultado e um shell no terminal sem abrir o `index.d.ts`; `r.stdout.trim()` compila quando `text` não é `false`.
+- **Invariantes:** nenhuma mudança de comportamento; o binding em runtime fica igual; o surface-check e o readme-check continuam verdes.
+- **Qualidade:** cada receita nova é código que roda no readme-check; o README continua curto.
+- **DoD:** o Q2 roda de novo com agentes novos e os atritos somem.
+- **Não fazer:** mudar a API em runtime.
+
 #### W07 · Child: kill de árvore e saída
 - **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/**`, exceto `deadline.rs` e `run.rs` (do W09)
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-PROC-01, C-SCOPE-01.
