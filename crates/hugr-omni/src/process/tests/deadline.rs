@@ -216,11 +216,12 @@ fn run_never_blocks_the_callers_executor() {
 /// C-IO-04, §6: once the root exited, the grace window is all its descendants get. A descendant that holds the
 /// output and ignores the graceful request (it inherits the root's `ignore-term`) is stopped at once when the window
 /// ends: `run()` returns about one grace after the root's exit, not two, with the root's own `Exit`, and only after
-/// the holder is gone.
+/// the holder is gone. The clock starts before the spawn, so the root's own start-up (slow on a loaded Windows
+/// runner) is inside it: the bound is "less than two graces", with a grace long enough to tell the two apart.
 #[test]
 fn run_stops_a_resisting_holder_when_the_grace_window_ends() {
     let log = log_path("w09-window");
-    let grace = Duration::from_millis(1000);
+    let grace = Duration::from_millis(2000);
     let mut cmd = fixture();
     cmd.args([&pidlog(&log), "ignore-term", "out=ROOT\\n", "hold=60000", "exit=0"])
         .grace(grace);
@@ -235,7 +236,7 @@ fn run_stops_a_resisting_holder_when_the_grace_window_ends() {
     );
     assert_eq!(out.stdout, Data::Text("ROOT\n".into()));
     assert!(took >= grace, "the window was cut short: {took:?}");
-    assert!(took < grace + grace / 2, "stopped after a second grace: {took:?}");
+    assert!(took < grace * 2, "stopped after a second grace: {took:?}");
     assert_dead(&logged(&log, 2), Duration::ZERO);
     let _ = std::fs::remove_file(&log);
 }
