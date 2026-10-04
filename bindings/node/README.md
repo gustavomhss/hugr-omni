@@ -31,14 +31,14 @@ console.log(await server.processes()); // every process the server started, with
 // leaving the scope stops the server and everything it started
 ```
 
-`await using` runs on Node 24+, Bun and Deno, and on Node 22 once TypeScript 5.2+ has compiled it; without that, use
-`try`/`finally` with `await server.stop()`.
+CommonJS works too: `const { run, spawn } = require("hugr-omni")`. `await using` needs Node 24+, Bun, Deno, or TypeScript
+5.2+ compiling for Node 22; elsewhere write `try { ... } finally { await server.stop(); }`.
 
 ## More
 
 - Source, issues and the Rust core: https://gitlab.com/gmhelmold/hugr-omni
-- Recipes for agents (dev server, tests with a timeout, interactive terminal, cleanup):
-  https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/docs/guide/recipes.md
+- Recipes for agents (dev server, tests with a timeout, interactive terminal, cleanup; `env`, `inheritEnv`, `cwd`,
+  `stdin`, `mergeStderr`, reading a result, a shell): https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/docs/guide/recipes.md
 - Every function, option and result field: https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/docs/api-contract.md
 - What holds on each OS, and the evidence: https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/GUARANTEES.md
 

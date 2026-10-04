@@ -35,7 +35,7 @@ grace | CommonOptions.graceMs, Child.stop.graceMs | Command::grace
 cancellation | CommonOptions.signal | Command::cancel_on, CancellationToken
 stdin | RunOptions.input, SpawnOptions.stdin, Child.write, PipeChild.closeStdin | Command::input, Command::stdin, Stdin, Child::write, PipeChild::close_stdin
 output limit | RunOptions.maxOutputBytes | Command::max_output_bytes
-text vs bytes | CommonOptions.text | Command::text, Data
+text vs bytes | CommonOptions.text, run.text, spawn.text | Command::text, Data
 output | CommonOptions.mergeStderr, Child.output, Child.lines, Child.droppedBytes, Child.droppedBytes.stdout, Child.droppedBytes.stderr,
   Chunk, Chunk.stream, Chunk.data, Chunk.lostBefore, Line, Line.stream, Line.text, Line.lostBefore, Line.continues |
   Command::merge_stderr, Child::output, Child::lines, Child::dropped_bytes, DroppedBytes, DroppedBytes.stdout, DroppedBytes.stderr,

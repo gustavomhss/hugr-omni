@@ -20,8 +20,7 @@ deno add npm:hugr-omni    # Deno
 ```
 
 Node 22+, Bun or Deno; prebuilt for Windows x64, macOS (arm64, x64) and Linux (x64, arm64, glibc). Nothing is compiled
-or downloaded at install time. `await using` runs on Node 24+, Bun and Deno, and on Node 22 once TypeScript 5.2+ has
-compiled it; without that, use `try`/`finally` with `stop()` (see the [recipes](docs/guide/recipes.md)).
+or downloaded at install time.
 
 ## Quickstart
 
@@ -39,10 +38,16 @@ console.log(await server.processes()); // every process the server started, with
 // leaving the scope stops the server and everything it started
 ```
 
-`run` finishes and returns everything; `spawn` streams, writes, waits and stops. A non-zero exit is a result, not an
-exception; every failure to start is an `OmniError` with a `code`. The
-[recipes for agents](docs/guide/recipes.md) cover a dev server, tests with a timeout, an interactive terminal and
-cleanup, as runnable code.
+`run` finishes and returns everything (`stdout` and `stderr` are strings; `text: false` gives bytes); `spawn` streams,
+writes, waits and stops. A non-zero exit is a result, not an exception; every failure to start is an `OmniError` with a
+`code`.
+
+CommonJS works too: `const { run, spawn } = require("hugr-omni")`. `await using` needs Node 24+, Bun, Deno, or TypeScript
+5.2+ compiling for Node 22; elsewhere write `try { ... } finally { await server.stop(); }`.
+
+The [recipes for agents](docs/guide/recipes.md) are runnable code for a dev server, tests with a timeout, an interactive
+terminal and cleanup, and for the options you look for next: `env`, `inheritEnv`, `cwd`, `stdin`, `mergeStderr`,
+reading a result, a shell in a terminal.
 
 ## From Rust
 
@@ -95,7 +100,7 @@ Reproduce with `qa/run --quick`
 
 ## Read on
 
-- [Recipes for agents](docs/guide/recipes.md): dev server, tests with a timeout, interactive terminal, cleanup.
+- [Recipes for agents](docs/guide/recipes.md): dev server, tests, terminal, cleanup, options, results, a shell.
 - [API contract](docs/api-contract.md): every function, option and result field, and what each promises.
 - [GUARANTEES.md](GUARANTEES.md): what holds on each OS, and the test or measurement that proves it.
 - [docs/acceptance.md](docs/acceptance.md): the contract items and the KPIs that decide the first release.

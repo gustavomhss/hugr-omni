@@ -16,7 +16,7 @@
 // `--root` (default: this repository) is where README.md, docs/guide and relative file names are; `--repo` (default:
 // this repository) holds bindings/node, crates/ and target/, which the blocks run against.
 //
-// Needs for the run: Node 22+, npm and network once (TypeScript is cached), cargo and the repository's toolchain, git,
+// Needs for the run: Node 22+, npm and network once (TypeScript and @types/node are cached), cargo and the repository's toolchain, git,
 // and the repository built: `cargo build --workspace --bins` and `cargo build -p hugr-omni-node`.
 // Only the two READMEs above and docs/guide are checked: the other READMEs (qa/, bindings/node/npm/) are maintainers' build notes whose
 // commands are the CI's own. An unknown flag, or a flag without its value, is refused.

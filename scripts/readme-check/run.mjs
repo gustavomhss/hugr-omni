@@ -5,8 +5,9 @@
 // sh    simple commands (blocks.mjs), run without a shell in the repository root, as in a checkout, with CARGO_TARGET_DIR
 //       pointing into this run's scratch directory: `cargo build --release -p omni-supervisor` in the README builds the
 //       supervisor there, and nothing already in target/ is relied on.
-// ts    type-checked against bindings/node/index.d.ts and compiled by TypeScript 5 (npm installs it once into a cache
-//       dir; `await using` does not parse on Node 22 otherwise), then run by the `node` that runs this script, with
+// ts    type-checked against bindings/node/index.d.ts and the Node 22 types (`@types/node`, as in a reader's project) and
+//       compiled by TypeScript 5 (npm installs both once into a cache dir; `await using` does not parse on Node 22
+//       otherwise), then run by the `node` that runs this script, with
 //       HUGR_OMNI_SUPERVISOR pointing at this checkout's debug build. `hugr-omni` resolves to bindings/node/index.js
 //       through a shim package.
 // rust  a throwaway crate outside the workspace whose [dependencies] are the README's own `toml` block before the block
@@ -139,14 +140,19 @@ function runSh(blocks, work, env, ms, repo) {
   return out;
 }
 
+/** TypeScript 5 and the Node 22 types, installed once into `cache`: a reader's project has `@types/node`, so a block may use `process` and `node:*`. */
+const TS_PACKAGES = ["typescript@5", "@types/node@22"];
+
 function typescript(cache) {
   const tsc = join(cache, "node_modules", "typescript", "bin", "tsc");
-  if (!existsSync(tsc)) {
+  const typeRoot = join(cache, "node_modules", "@types");
+  const installed = () => existsSync(tsc) && existsSync(join(typeRoot, "node"));
+  if (!installed()) {
     mkdirSync(cache, { recursive: true });
-    const r = sh("npm", ["install", "--no-audit", "--no-fund", "--no-save", "--prefix", cache, "typescript@5"], { timeout: 300_000 });
-    if (r.status !== 0 || !existsSync(tsc)) throw new Unrunnable(`npm cannot install typescript@5 into ${cache} (network?):\n${tail(`${r.stdout}\n${r.stderr}`)}`);
+    const r = sh("npm", ["install", "--no-audit", "--no-fund", "--no-save", "--prefix", cache, ...TS_PACKAGES], { timeout: 300_000 });
+    if (r.status !== 0 || !installed()) throw new Unrunnable(`npm cannot install ${TS_PACKAGES.join(" and ")} into ${cache} (network?):\n${tail(`${r.stdout}\n${r.stderr}`)}`);
   }
-  return tsc;
+  return { tsc, typeRoot };
 }
 
 /** Runs the TypeScript blocks; returns the violations. */
@@ -157,7 +163,7 @@ function runTs(blocks, work, env, ms, repo, cache) {
   }
   const tsEnv = { ...env, HUGR_OMNI_SUPERVISOR: supervisor };
   const out = [];
-  const tsc = typescript(cache);
+  const { tsc, typeRoot } = typescript(cache);
   const dirs = blocks.map((b, i) => {
     const dir = join(work, `p${i}`);
     cpSync(fixture, dir, { recursive: true });
@@ -172,7 +178,7 @@ function runTs(blocks, work, env, ms, repo, cache) {
     join(work, "tsconfig.json"),
     JSON.stringify({
       compilerOptions: {
-        strict: true, target: "es2022", module: "esnext", moduleResolution: "bundler", types: [],
+        strict: true, target: "es2022", module: "esnext", moduleResolution: "bundler", types: ["node"], typeRoots: [fwd(typeRoot)],
         lib: ["es2022", "esnext.disposable", "dom"], paths: { "hugr-omni": [fwd(join(repo, "bindings", "node", "index.d.ts"))] },
       },
       include: ["p*/block.mts"],

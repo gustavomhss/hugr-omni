@@ -233,6 +233,11 @@ test("run: blocks that pass do pass (hugr-omni resolves, `await using` compiles 
   expects(got, 0, "OK", "ran: ts 2");
 });
 
+test("run: a block may use `process` and `node:*`, as in a reader's project (the Node types are installed)", () => {
+  const got = real(fence("ts", 'import { tmpdir } from "node:os";', "const path: string | undefined = process.env.PATH;", "console.log(typeof path, tmpdir());"));
+  expects(got, 0, "OK", "ran: ts 1");
+});
+
 test("run: a block that throws fails and names file:line", () => {
   expects(real(`# d\n\n${fence("ts", "console.log(1);", "throw new Error('boom');")}`), 1, "doc.md:3", "exited 1", "boom");
 });

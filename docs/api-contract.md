@@ -21,6 +21,7 @@ interface CommonOptions {
   graceMs?: number;                             // default 2000; how long the tree gets to wind down (see §5)
   signal?: AbortSignal;                         // cancellation (see §8)
   text?: boolean;                               // default true: UTF-8 strings; false: Uint8Array, lossless
+                                                // (index.d.ts types the output by it: string by default, Uint8Array for text: false)
   mergeStderr?: boolean;                        // pipe mode: stderr goes into the stdout pipe at the OS level
 }
 interface RunOptions extends CommonOptions {

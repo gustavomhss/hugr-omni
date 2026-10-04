@@ -1,5 +1,6 @@
 /// <reference lib="esnext.disposable" />
-// hugr-omni — public TypeScript surface. Frozen copy of docs/api-contract.md §1 (W00); W13 never edits it.
+// hugr-omni — public TypeScript surface. Copy of docs/api-contract.md §1 (W00), with one typing addition (W18b, lead
+// decision): the type of the output follows `text`. `string` unless `text: false`, then `Uint8Array`; no runtime change.
 
 /**
  * Runs a program to completion and returns its exit status with the complete output.
@@ -10,6 +11,8 @@
  * const r = await run("git", ["status", "--short"], { timeoutMs: 10_000 });
  * if (!r.success) console.error(r.stderr);
  */
+export function run(command: string, args?: readonly string[], options?: RunOptions & { text?: true }): Promise<RunResult<string>>;
+export function run(command: string, args: readonly string[] | undefined, options: RunOptions & { text: false }): Promise<RunResult<Uint8Array>>;
 export function run(command: string, args?: readonly string[], options?: RunOptions): Promise<RunResult>;
 
 /**
@@ -21,6 +24,11 @@ export function run(command: string, args?: readonly string[], options?: RunOpti
  * for await (const line of server.lines()) if (line.text.includes("ready")) break;
  * // leaving the scope awaits server.stop(): the dev server and everything it started are gone
  */
+export function spawn(command: string, args?: readonly string[], options?: SpawnOptions & { pty?: undefined; text?: true }): PipeChild<string>;
+export function spawn(command: string, args: readonly string[] | undefined, options: SpawnOptions & { pty?: undefined; text: false }): PipeChild<Uint8Array>;
+export function spawn(command: string, args: readonly string[] | undefined, options: SpawnOptions & { pty: PtyOption; text?: true }): PtyChild<string>;
+export function spawn(command: string, args: readonly string[] | undefined, options: SpawnOptions & { pty: PtyOption; text: false }): PtyChild<Uint8Array>;
+// `text` known only at run time: the child kind still follows `pty`, and the data is either kind.
 export function spawn(command: string, args: readonly string[] | undefined, options: SpawnOptions & { pty: PtyOption }): PtyChild;
 export function spawn(command: string, args?: readonly string[], options?: SpawnOptions & { pty?: undefined }): PipeChild;
 export function spawn(command: string, args?: readonly string[], options?: SpawnOptions): PipeChild | PtyChild;
@@ -60,11 +68,14 @@ export interface SpawnOptions extends CommonOptions {
 /** `true` = 80 x 24. */
 export type PtyOption = true | { cols?: number; rows?: number };
 
-/** What pipe and terminal children share. */
-export interface Child extends AsyncDisposable {
+/**
+ * What pipe and terminal children share. `D` is the type of the output data: `string`, or `Uint8Array` with `text: false`;
+ * `spawn` picks it from `text`, and a bare `Child` is either.
+ */
+export interface Child<D = string | Uint8Array> extends AsyncDisposable {
   readonly pid: number;
   /** Single consumer: the first iteration claims it; leaving the loop detaches for good. */
-  readonly output: AsyncIterable<Chunk>;
+  readonly output: AsyncIterable<Chunk<D>>;
   /** Line view of the same single consumer. */
   lines(): AsyncIterable<Line>;
   /** Bytes dropped because nobody was reading (terminal output counts as stdout). */
@@ -78,15 +89,15 @@ export interface Child extends AsyncDisposable {
   /** The live processes `stop()` would end right now; `[]` once the tree is gone. */
   processes(): Promise<ProcessInfo[]>;
 }
-export interface PipeChild extends Child {
+export interface PipeChild<D = string | Uint8Array> extends Child<D> {
   /** Waits for queued writes, then closes stdin; idempotent. */
   closeStdin(): Promise<void>;
 }
-export interface PtyChild extends Child {
+export interface PtyChild<D = string | Uint8Array> extends Child<D> {
   resize(cols: number, rows: number): void;
 }
 
-export interface Chunk { stream: "stdout" | "stderr" | "pty"; data: string | Uint8Array; lostBefore?: number; }
+export interface Chunk<D = string | Uint8Array> { stream: "stdout" | "stderr" | "pty"; data: D; lostBefore?: number; }
 export interface Line { stream: "stdout" | "stderr" | "pty"; text: string; lostBefore?: number; continues?: true; }
 export interface ProcessInfo { pid: number; parentPid: number | null; name: string | null; }
 export interface Exit {
@@ -98,11 +109,12 @@ export interface Exit {
   /** `reason === "exit" && exitCode === 0`. */
   success: boolean;
 }
-export interface RunResult extends Exit {
+/** `D` is `string`, or `Uint8Array` with `text: false`; `run` picks it from `text`, and a bare `RunResult` is either. */
+export interface RunResult<D = string | Uint8Array> extends Exit {
   /** Complete; terminal output lands here. */
-  stdout: string | Uint8Array;
+  stdout: D;
   /** Complete; empty for a terminal and with `mergeStderr`. */
-  stderr: string | Uint8Array;
+  stderr: D;
 }
 export class OmniError extends Error {
   readonly code: "NOT_FOUND" | "NOT_EXECUTABLE" | "INVALID_CWD" | "INVALID_ARGUMENT"
