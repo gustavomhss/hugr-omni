@@ -1,7 +1,7 @@
 # hugr-omni — Plano de execução
 
 > Status: **G0 assinado (B)** · contrato congelado (D5) · primeira onda (W00, W01, W03–W06) na `main` (PR #4) · segunda onda (W02, W07, W10, W12w) no `bundle/B3`; W09 e W12 em execução · 2026-10-02
-> Repo: `gitlab.com/gmhelmold/hugr-omni` (público) · CI: AppVeyor + runner Windows do GitLab · Licença: MIT OR Apache-2.0
+> Repo: `gitlab.com/gmhelmold/hugr-omni` (público) · CI: runners do GitLab (Linux, Windows 2022); depois AppVeyor · Licença: MIT OR Apache-2.0
 > Lead/orquestrador: Claude (sessão principal). Execução: sub-agentes Claude. Revisão: Codex CLI.
 
 ---
@@ -233,7 +233,7 @@ Windows em runtime e os alvos arm64 são provados no CI do bundle. Uma falha lá
   - CI completo uma única vez, com o label `full`: 5 alvos × runtimes + instalação limpa + QA no Windows.
 - `concurrency: cancel-in-progress`; filtros de caminho (mudança só de docs roda só o check de docs); `Swatinem/rust-cache`.
 - **Local primeiro:** macOS nativo (esta máquina é x86_64), Linux via Docker, Windows compilado por `clippy --target`.
-- **Windows sob demanda:** build do AppVeyor pela API com `TEST_FILTER` (Server 2019) e pipeline manual do GitLab (`windows-2022`, Server 2022), para WPs com muito Windows.
+- **Windows sob demanda:** pipeline manual ou pela API no GitLab (`windows-2022`, Server 2022) com `TEST_FILTER`, para WPs com muito Windows.
 - O merge do bundle usa rebase-merge, para cada WP continuar um commit próprio em `main`.
 - O Codex revisa cada bundle uma vez, olhando só os seams entre WPs.
 
@@ -836,5 +836,5 @@ Merge no bundle só com os 5 campos em `pass`, zero P0/P1 e a verificação do l
 - 2026-10-02 · Lead (W02 r2, C-TS-01): "um Child vivo mantém o event loop vivo" vale até a raiz sair (ou o `stop()`); depois disso só um consumidor de saída conectado mantém o loop. Descendentes órfãos sozinhos nunca seguram o host. Regra do binding (W13); o teste de fim normal do W02 depende dela.
 - 2026-10-03 · Lead (DoD do W12): o probe "tirar o `Go`" não fica vermelho nesta arquitetura. Sem a espera, o controle de 300 execuções perdeu 0/1200 no macOS 15.3 x86 (local) e 0/900 no `macos-26-arm64` do CI (run 37160768270). Sem a espera e com o leitor do host atrasado 50 ms: 1/300 perdido no local, 0/900 no CI (run 37160904402). Com a espera e o mesmo atraso: 0/900 (run 37160914794). O supervisor mantém o master aberto desde antes do fork, e o macOS segura o líder da sessão até a saída ser lida; isso fecha quase toda a janela do S1. A espera (R9) fica: custa uma ida e volta por spawn de PTY e cobre o caso raro do leitor lento. O controle de 300 fica como teste de regressão; o DoD do W12 é cumprido por esta evidência no lugar do probe vermelho.
 - 2026-10-03 · Lead (W09): no `run()`, a janela de `graceMs` depois da saída da raiz é a graça dos descendentes; quando ela acaba, o resto da árvore é parado na hora (graça 0), não com um segundo `graceMs`. O `run()` fica limitado a ~`graceMs` depois da saída da raiz (C-IO-04); processos de longa duração são do `spawn()` (§6). Texto do §6 esclarecido.
-- 2026-10-04 · Owner: o GitHub bloqueou o Actions na conta `gusmhs`. O repo foi para o GitLab (`gmhelmold/hugr-omni`, público) e o CI para o AppVeyor (Ubuntu 24.04, macOS Sonoma, Windows Server 2019 = build 17763). O Server 2022 (20348) roda sob demanda no runner Windows do GitLab. O build 26100 (Server 2025 / Windows 11) fica sem CI; as provas do W06 e do W12w nele são do GitHub (registradas nos ADRs e no PLAN).
+- 2026-10-04 · Owner: o GitHub bloqueou o Actions na conta `gusmhs`. O repo foi para o GitLab (`gmhelmold/hugr-omni`, público). O CI usa os minutos grátis dos runners do GitLab (Linux e Windows Server 2022 = build 20348); o macOS fica no gate frio local do lead. Depois o CI vai para o AppVeyor (`appveyor.yml` pronto: Ubuntu 24.04, macOS Sonoma, Windows Server 2019 = build 17763). O build 26100 (Server 2025 / Windows 11) fica sem CI; as provas do W06 e do W12w nele são do GitHub (registradas nos ADRs e no PLAN).
 - 2026-10-01 · Owner: monolito modular + god-file guard. Limites por arquivo de código (não por PR): ideal 400, ok 600, máximo 650; documentos fora. Implementado em `scripts/file-size-guard.py`, com testes de dentes em `scripts/test_file_size_guard.py` (9 casos) e mutation probe no repo real (um arquivo de 651 linhas → FAIL; removido → verde).

@@ -1,4 +1,4 @@
-# CI on AppVeyor; the repo lives on GitLab (gitlab.com/gmhelmold/hugr-omni). One job per OS, run in turn (the free
+# Not active yet: CI runs on GitLab (.gitlab-ci.yml) until AppVeyor is connected. One job per OS, run in turn (the free
 # plan has one concurrent job). Pushes to main and bundle/* build; wp/* never does. Any branch can be built on
 # demand through the API, optionally with TEST_FILTER set (see AGENTS.md, "Gates").
 version: '{build}'

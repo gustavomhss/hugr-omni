@@ -89,8 +89,9 @@ docker run --rm -v "$PWD":/w -w /w -v omni-cargo:/usr/local/cargo/registry -v om
 
 - **Supervisor tests in Docker** need `--privileged`: the Linux PID-reuse test steers `ns_last_pid`, and it fails
   rather than skips without it.
-- **CI** lives off this machine: AppVeyor (`appveyor.yml`: Linux, macOS, Windows Server 2019) builds `main` and
-  `bundle/*`; GitLab's Windows runner (`.gitlab-ci.yml`: Server 2022) runs on demand. Only the lead starts CI.
+- **CI** runs on GitLab's hosted runners (`.gitlab-ci.yml`: Linux and Windows Server 2022) for `main` and `bundle/*`,
+  and on demand; macOS is the lead's local cold gate. `appveyor.yml` is ready for the later move to AppVeyor. Only
+  the lead starts CI.
 - **First time:** `rustup target add x86_64-pc-windows-msvc --toolchain 1.98.0`.
 - **Disk is limited:** at most 2 heavy Rust builds at once on this machine. Delete your worktree's `target/` when
   you stop.

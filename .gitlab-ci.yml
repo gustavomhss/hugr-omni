@@ -1,12 +1,50 @@
-# Windows Server 2022 (build 20348) on GitLab's Windows runners, on demand only: a pipeline started by hand or by the
-# API, optionally with TEST_FILTER set. Every other OS, and Windows Server 2019, runs on AppVeyor (appveyor.yml).
+# CI on GitLab's hosted runners (free compute minutes; AppVeyor, appveyor.yml, takes over later). Pushes to main
+# and bundle/* run it, and so do pipelines started by hand or by the API (any branch, optionally with TEST_FILTER);
+# wp/* never does. macOS has no free hosted runner: the lead's cold gate on macOS covers it.
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+    - if: $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH =~ /^bundle\//)
 
 variables:
   TEST_FILTER: ""
+  CARGO_TERM_COLOR: always
 
+# Linux: the static checks, the musl supervisor, the whole suite, the TS runner's teeth and K4.
+linux:
+  image: rust:1.96-bookworm
+  tags: [saas-linux-small-amd64]
+  timeout: 90m
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
+  cache:
+    key: cargo-linux
+    paths: [.cargo-home/registry]
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3 xz-utils > /dev/null
+    - curl -fsSL https://nodejs.org/dist/v22.20.0/node-v22.20.0-linux-x64.tar.xz | tar -xJ -C /opt
+    - export PATH="/opt/node-v22.20.0-linux-x64/bin:$CARGO_HOME/bin:$PATH"
+    - rustup toolchain install
+    - rustup target add x86_64-pc-windows-msvc x86_64-unknown-linux-musl
+  script:
+    - python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
+    - python3 scripts/plan-sections-check.py
+    - cargo fmt --all -- --check
+    - cargo clippy --workspace --all-targets -- -D warnings
+    - cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+    - cargo build --release -p omni-supervisor --target x86_64-unknown-linux-musl
+    - readelf -l target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor > elf.txt
+    - if grep -q INTERP elf.txt; then echo "the supervisor is dynamically linked"; exit 1; fi
+    - (cd bindings/node && npx -y -p typescript@5 tsc -p tsconfig.json && npx -y -p typescript@5 tsc -p test/tsconfig.json)
+    - cargo build --workspace --bins
+    - HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" cargo test -p omni-supervisor --no-fail-fast
+    - cargo test --workspace --no-fail-fast -- $TEST_FILTER
+    - node bindings/node/test/teeth.mjs
+    # K4 spawn round trip, release build (Linux is the K4 reference).
+    - cargo build --release --workspace --bins
+    - cargo test --release -p hugr-omni --no-fail-fast -- k4
+
+# Windows Server 2022 (build 20348).
 windows-2022:
   tags: [saas-windows-medium-amd64]
   timeout: 90m

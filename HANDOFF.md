@@ -18,9 +18,10 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
 - **Repo e CI (desde 2026-10-04):** GitLab `gmhelmold/hugr-omni` (remote `origin`, ssh; `glab` logado como
   `gmhelmold`). O GitHub (`gusmhs`, remote `github`) ficou só leitura: o Actions foi bloqueado na conta.
-  - CI no AppVeyor (conta `gustavoschneiter`, `appveyor.yml`): Linux, macOS e Windows Server 2019, em pushes da
-    `main` e de `bundle/*`; sob demanda pela API, com `TEST_FILTER`. A key é do usuário: nunca no repo.
-  - Windows Server 2022 no runner Windows do GitLab, sob demanda (`.gitlab-ci.yml`, pipeline manual/API).
+  - CI agora: runners do GitLab com os minutos grátis (`.gitlab-ci.yml`: Linux + Windows Server 2022), em pushes da
+    `main` e de `bundle/*` e sob demanda (pipeline manual/API, `TEST_FILTER`). macOS = gate frio local do lead.
+  - Depois: AppVeyor (conta `gustavoschneiter`, `appveyor.yml` pronto: Ubuntu, macOS, Windows Server 2019). Falta o
+    usuário autorizar o GitLab no AppVeyor. A key é do usuário: nunca no repo.
   - Nunca trocar contas nem mexer em config global.
 
 ## Repo (histórico do GitHub)
