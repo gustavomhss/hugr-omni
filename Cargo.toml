@@ -8,7 +8,7 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/gusmhs/hugr-omni"
+repository = "https://gitlab.com/gmhelmold/hugr-omni"
 
 # The dependency allowlist (AGENTS.md). Anything new needs the lead's approval (INV-12).
 [workspace.dependencies]

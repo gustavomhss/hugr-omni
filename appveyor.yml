@@ -1,0 +1,104 @@
+# CI on AppVeyor; the repo lives on GitLab (gitlab.com/gmhelmold/hugr-omni). One job per OS, run in turn (the free
+# plan has one concurrent job). Pushes to main and bundle/* build; wp/* never does. Any branch can be built on
+# demand through the API, optionally with TEST_FILTER set (see AGENTS.md, "Gates").
+version: '{build}'
+skip_tags: true
+clone_depth: 1
+
+branches:
+  only:
+    - main
+    - /^bundle\/.*/
+
+image:
+  - Ubuntu2404
+  - macos-sonoma
+  - Visual Studio 2022
+
+environment:
+  CARGO_TERM_COLOR: always
+  TEST_FILTER: ""
+
+matrix:
+  fast_finish: false
+
+build: off
+
+for:
+  # Linux: the static checks, the musl supervisor, the whole suite, the TS runner's teeth and K4.
+  - matrix:
+      only:
+        - image: Ubuntu2404
+    install:
+      - sh: |
+          set -euo pipefail
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup toolchain install
+          rustup target add x86_64-pc-windows-msvc x86_64-unknown-linux-musl
+    build_script:
+      - sh: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
+          python3 scripts/plan-sections-check.py
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+          cargo build --release -p omni-supervisor --target x86_64-unknown-linux-musl
+          readelf -l target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor > elf.txt
+          if grep -q INTERP elf.txt; then echo "the supervisor is dynamically linked"; exit 1; fi
+          (cd bindings/node && npx -y -p typescript@5 tsc -p tsconfig.json && npx -y -p typescript@5 tsc -p test/tsconfig.json)
+          cargo build --workspace --bins
+    test_script:
+      - sh: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          # The PID-reuse test steers ns_last_pid in its own user namespace.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" \
+            cargo test -p omni-supervisor --no-fail-fast
+          cargo test --workspace --no-fail-fast -- $TEST_FILTER
+          node bindings/node/test/teeth.mjs
+          # K4 spawn round trip, release build (Linux is the K4 reference).
+          cargo build --release --workspace --bins
+          cargo test --release -p hugr-omni --no-fail-fast -- k4
+
+  - matrix:
+      only:
+        - image: macos-sonoma
+    install:
+      - sh: |
+          set -euo pipefail
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup toolchain install
+    build_script:
+      - sh: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo build --workspace --bins
+    test_script:
+      - sh: |
+          set -eo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo test --workspace --no-fail-fast -- $TEST_FILTER
+          if [ -s "$HOME/.nvm/nvm.sh" ]; then source "$HOME/.nvm/nvm.sh"; nvm use 22 || nvm install 22; fi
+          node --version
+          node bindings/node/test/teeth.mjs
+
+  # Windows Server 2019 (build 17763). Server 2022 runs on GitLab's Windows runners on demand (.gitlab-ci.yml).
+  - matrix:
+      only:
+        - image: Visual Studio 2022
+    install:
+      - ps: Install-Product node 22 x64
+      - cmd: appveyor DownloadFile https://win.rustup.rs/x86_64 -FileName rustup-init.exe
+      - cmd: rustup-init.exe -y --default-toolchain none --profile minimal
+      - cmd: set PATH=%USERPROFILE%\.cargo\bin;%PATH%
+      - cmd: rustup toolchain install
+    build_script:
+      - cmd: cargo build --workspace --bins
+    test_script:
+      - cmd: cargo test --workspace --no-fail-fast -- %TEST_FILTER%
+      - cmd: node bindings/node/test/teeth.mjs

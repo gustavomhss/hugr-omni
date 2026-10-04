@@ -30,7 +30,7 @@ def main() -> None:
 STEP 0  In your worktree run `git fetch -q origin && git switch -c wp/{wp} {base}` FIRST (worktrees may start elsewhere),
         then `git merge-base --is-ancestor {base} HEAD` (abort if it fails). Echo BASELINE_VERIFIED {base}.
 COMMIT  locally on wp/{wp}, early and often. Do not push and do not run Docker: the lead pushes, runs the Linux
-        cold gate and dispatches windows.yml. Never switch the active gh account or change any global git/gh config.
+        cold gate and starts the Windows CI. Never switch the active gh account or change any global git/gh config.
 READ    AGENTS.md (binding) · your card below · docs/api-contract.md · docs/adr/0005-supervisor.md · docs/protocol.md ·
         conformance/SPEC.md · conformance/FIXTURE.md · GUARANTEES.md · the seam files you call or implement.
 CARD    (the axioms an independent Codex review judges you against, field by field):

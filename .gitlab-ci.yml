@@ -1,0 +1,19 @@
+# Windows Server 2022 (build 20348) on GitLab's Windows runners, on demand only: a pipeline started by hand or by the
+# API, optionally with TEST_FILTER set. Every other OS, and Windows Server 2019, runs on AppVeyor (appveyor.yml).
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+
+variables:
+  TEST_FILTER: ""
+
+windows-2022:
+  tags: [saas-windows-medium-amd64]
+  timeout: 90m
+  script:
+    - Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+    - .\rustup-init.exe -y --default-toolchain none --profile minimal
+    - $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    - rustup toolchain install
+    - cargo build --workspace --bins
+    - cargo test --workspace --no-fail-fast -- $env:TEST_FILTER

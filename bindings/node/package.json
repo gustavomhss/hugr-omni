@@ -4,7 +4,7 @@
   "private": true,
   "description": "Run processes and terminals with identical, tested behavior on Windows, macOS and Linux.",
   "license": "MIT OR Apache-2.0",
-  "repository": "github:gusmhs/hugr-omni",
+  "repository": "gitlab:gmhelmold/hugr-omni",
   "main": "index.js",
   "types": "index.d.ts",
   "engines": {

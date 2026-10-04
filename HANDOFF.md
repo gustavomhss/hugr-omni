@@ -16,10 +16,14 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
     `wp/<id>`;
   - revisão: Codex CLI contra o card do WP;
   - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
-- **Credenciais:** `gusmhs` é a única conta no `gh` (a `gmhelmold` foi suspensa em 2026-10-02). Push com `git push`;
-  gh com `-R gusmhs/hugr-omni`. Nunca trocar a conta nem mexer em config global.
+- **Repo e CI (desde 2026-10-04):** GitLab `gmhelmold/hugr-omni` (remote `origin`, ssh; `glab` logado como
+  `gmhelmold`). O GitHub (`gusmhs`, remote `github`) ficou só leitura: o Actions foi bloqueado na conta.
+  - CI no AppVeyor (conta `gustavoschneiter`, `appveyor.yml`): Linux, macOS e Windows Server 2019, em pushes da
+    `main` e de `bundle/*`; sob demanda pela API, com `TEST_FILTER`. A key é do usuário: nunca no repo.
+  - Windows Server 2022 no runner Windows do GitLab, sob demanda (`.gitlab-ci.yml`, pipeline manual/API).
+  - Nunca trocar contas nem mexer em config global.
 
-## Repo `gusmhs/hugr-omni`
+## Repo (histórico do GitHub)
 
 - **`main` = `ee40167`:** B0 + B1a (PR #2), com o contrato congelado, o ADR-0005 e o scaffold W00 completo:
   - workspace de 4 crates;
@@ -73,5 +77,5 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   W12 (pty_unix, pty, `spawn_pty`/`PtyChild::resize`; PTYSYS-U, C-PTY-01..04). Briefs em
   `~/Documents/HuGR/hugr-omni-reviews/briefs/W09.brief.txt` e `W12.brief.txt`.
 - Fluxo por entrega: push da `wp/<id>` pelo lead → L0 → leitura → Codex (`scripts/review-prompt.py`) → probe do lead →
-  frios (macOS; Linux no Docker `--privileged`; `windows.yml` se tocar Windows) → squash na `bundle/B3` → ledger.
+  frios (macOS; Linux no Docker `--privileged`; Windows CI se tocar Windows) → squash na `bundle/B3` → ledger.
 - Depois do W09 e do W12: PR da `bundle/B3` para a `main`, CI completo, merge. Então W13 (binding Node).
