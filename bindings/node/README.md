@@ -12,6 +12,9 @@ bun add hugr-omni         # Bun
 deno add npm:hugr-omni    # Deno
 ```
 
+In a fresh Node project, run `npm pkg set type=module` (or use `.mts` files) for top-level `await`, and
+`npm i -D @types/node` if you type-check with TypeScript.
+
 Node 22+, Bun or Deno; prebuilt for Windows x64, macOS (arm64, x64) and Linux (x64, arm64, glibc). Nothing is compiled
 or downloaded at install time.
 

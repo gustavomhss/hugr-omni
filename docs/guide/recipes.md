@@ -10,6 +10,9 @@ prints `ready` and an `npm test` that passes (the one Unix-only block, the shell
 command. They are written as ES modules; from CommonJS, `require("hugr-omni")` gives the same `run`, `spawn` and
 `OmniError`.
 
+In a fresh Node project (`npm init -y` makes it CommonJS), run `npm pkg set type=module` (or name your files `.mts`)
+before using top-level `await`, and add `npm i -D @types/node` when you type-check with TypeScript.
+
 Which function: `run` when the program ends by itself and you want its whole output; `spawn` when it keeps running, or
 you want to read as it goes, write to it, or stop it.
 
