@@ -14,7 +14,7 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - **Quem faz o quê:**
   - execução: sub-agentes Claude Opus, um por worktree (`.claude/worktrees/agent-*`, ignorado pelo git), branch
     `wp/<id>`;
-  - revisão: Codex CLI contra o card do WP;
+  - revisão: um agente Claude separado (contexto novo, só leitura) contra o card do WP (o Codex acabou em 2026-10-05);
   - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
 - **Repo e CI (desde 2026-10-04):** GitLab `gmhelmold/hugr-omni` (remote `origin`, ssh; `glab` logado como
   `gmhelmold`). O GitHub (`gusmhs`, remote `github`) ficou só leitura: o Actions foi bloqueado na conta.
@@ -43,7 +43,7 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - **`main` = `70d1828`:** primeira onda completa (W00, W01, W03–W06), merged pelo PR #4 com CI verde (3 OS, supervisor
   no musl, K4 em release no Linux). Linha do contrato: `0 passed, 36 pending, 0 failed`.
 - **`bundle/B3`** (a partir da `main`): seam interno do `io` congelado (`Pumps`, `Source`, `Collected`, `Stdin`),
-  `scripts/brief.py` (gera o brief a partir do card) e `scripts/review-prompt.py` (o prompt do Codex).
+  `scripts/brief.py` (gera o brief a partir do card) e `scripts/review-prompt.py` (o prompt do revisor).
 - **Segunda onda em execução,** baseline `a62ddf8`, briefs em `~/Documents/HuGR/hugr-omni-reviews/briefs/`:
   - W10, io (Opus);
   - W07, Child (Opus);
@@ -60,7 +60,7 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   1. L0;
   2. o lead lê o código;
   3. o probe;
-  4. o Codex até aprovar;
+  4. o revisor Claude até aprovar;
   5. gates a frio, incluindo macOS sob carga e Linux privilegiado;
   6. squash no bundle.
 
@@ -97,6 +97,6 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Em execução (baseline `409cdac`, só commit local): W09 (deadline.rs, run.rs; C-TMO-01/02, C-HOST-01, C-RS-01/02) e
   W12 (pty_unix, pty, `spawn_pty`/`PtyChild::resize`; PTYSYS-U, C-PTY-01..04). Briefs em
   `~/Documents/HuGR/hugr-omni-reviews/briefs/W09.brief.txt` e `W12.brief.txt`.
-- Fluxo por entrega: push da `wp/<id>` pelo lead → L0 → leitura → Codex (`scripts/review-prompt.py`) → probe do lead →
+- Fluxo por entrega: push da `wp/<id>` pelo lead → L0 → leitura → revisor Claude (`scripts/review-prompt.py`) → probe do lead →
   frios (macOS; Linux no Docker `--privileged`; Windows CI se tocar Windows) → squash na `bundle/B3` → ledger.
 - Depois do W09 e do W12: PR da `bundle/B3` para a `main`, CI completo, merge. Então W13 (binding Node).
