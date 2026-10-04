@@ -69,6 +69,15 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Docker Desktop: subir com `open -a Docker` se cair; cada agente usa o próprio volume `omni-target-<WP>`.
 - O material para investidores está fora do repo: `~/Documents/HuGR/omni-investidores.html`.
 
+## Estado em 2026-10-04
+
+- Repo no GitLab (`gitlab.com/gmhelmold/hugr-omni`), CI nos runners do GitLab (minutos grátis; AppVeyor depois).
+- `main` = `c2e745b`: segunda onda inteira, contrato 36/36 (macOS local, Linux CI, Windows 2022 CI menos o W06b).
+- Próximo bundle: `bundle/B4` (a partir da `main`).
+- Aberto: **W06b** — no runner Windows do GitLab, o teste do W06 `stopped_arrives_only_once..._between_polls` falha
+  (CTRL_BREAK não chega; stop de graça 2000 levou 5230 ms). Investigar com pipelines manuais (`TEST_FILTER`).
+- Depois: W13 (binding Node/Bun/Deno), W14 (empacotamento), QA, W18, W21.
+
 ## Estado em 2026-10-03
 
 - `bundle/B3` tem a segunda onda inteira: W12w, W02, W10, W07 (frios verdes no macOS e no Linux em `3876315`;
