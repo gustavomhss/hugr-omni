@@ -1,4 +1,4 @@
-# Not active yet: CI runs on GitLab (.gitlab-ci.yml) until AppVeyor is connected. One job per OS, run in turn (the free
+# CI on AppVeyor for the GitLab repo (GitLab's free minutes ran out on 2026-10-04). One job per OS, run in turn (the free
 # plan has one concurrent job). Pushes to main and bundle/* build; wp/* never does. Any branch can be built on
 # demand through the API, optionally with TEST_FILTER set (see AGENTS.md, "Gates").
 version: '{build}'
@@ -50,6 +50,7 @@ for:
           if grep -q INTERP elf.txt; then echo "the supervisor is dynamically linked"; exit 1; fi
           (cd bindings/node && npx -y -p typescript@5 tsc -p tsconfig.json && npx -y -p typescript@5 tsc -p test/tsconfig.json)
           cargo build --workspace --bins
+          cargo build -p hugr-omni-node
     test_script:
       - sh: |
           set -euo pipefail
@@ -60,6 +61,11 @@ for:
             cargo test -p omni-supervisor --no-fail-fast
           cargo test --workspace --no-fail-fast -- $TEST_FILTER
           node bindings/node/test/teeth.mjs
+          # C-TS-01 / C-TS-02 through the binding: Node 22 and 24, Bun, Deno.
+          for t in contract idioms; do node bindings/node/test/$t.mjs; done
+          for t in contract idioms; do npx -y node@24 bindings/node/test/$t.mjs; done
+          for t in contract idioms; do npx -y bun@1 bindings/node/test/$t.mjs; done
+          for t in contract idioms; do npx -y deno@2 run -A bindings/node/test/$t.mjs; done
           # K4 spawn round trip, release build (Linux is the K4 reference).
           cargo build --release --workspace --bins
           cargo test --release -p hugr-omni --no-fail-fast -- k4
@@ -78,6 +84,7 @@ for:
           set -euo pipefail
           export PATH="$HOME/.cargo/bin:$PATH"
           cargo build --workspace --bins
+          cargo build -p hugr-omni-node
     test_script:
       - sh: |
           set -eo pipefail
@@ -85,9 +92,9 @@ for:
           cargo test --workspace --no-fail-fast -- $TEST_FILTER
           if [ -s "$HOME/.nvm/nvm.sh" ]; then source "$HOME/.nvm/nvm.sh"; nvm use 22 || nvm install 22; fi
           node --version
-          node bindings/node/test/teeth.mjs
+          for t in teeth contract idioms; do node bindings/node/test/$t.mjs; done
 
-  # Windows Server 2019 (build 17763). Server 2022 runs on GitLab's Windows runners on demand (.gitlab-ci.yml).
+  # Windows Server 2019 (build 17763). Server 2022 runs on GitLab's Windows runner when it has minutes (.gitlab-ci.yml).
   - matrix:
       only:
         - image: Visual Studio 2022
@@ -99,6 +106,9 @@ for:
       - cmd: rustup toolchain install
     build_script:
       - cmd: cargo build --workspace --bins
+      - cmd: cargo build -p hugr-omni-node
     test_script:
       - cmd: cargo test --workspace --no-fail-fast -- %TEST_FILTER%
       - cmd: node bindings/node/test/teeth.mjs
+      - cmd: node bindings/node/test/contract.mjs
+      - cmd: node bindings/node/test/idioms.mjs
