@@ -5,6 +5,16 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
     - if: $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH =~ /^bundle\//)
+      # A push that changes only documents runs nothing (minutes are limited).
+      changes:
+        - crates/**/*
+        - bindings/**/*
+        - conformance/**/*
+        - scripts/**/*
+        - Cargo.toml
+        - Cargo.lock
+        - rust-toolchain.toml
+        - .gitlab-ci.yml
 
 variables:
   TEST_FILTER: ""
