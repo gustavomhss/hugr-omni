@@ -1,24 +1,159 @@
-// W00 stub so the TS runner (W02) can load the package and fail every scenario for a stated reason.
-// W13 replaces this file with the real loader of the native module. No process logic ever lives here.
+// hugr-omni for Node, Bun and Deno: the surface of index.d.ts over the native addon (bindings/node/src, W13).
+// No process logic lives here (INV-01): every rule is the Rust core's. This file loads the addon, defines OmniError,
+// and adapts the JS idioms to it: async iteration over the output, AbortSignal, `await using`. It installs no signal
+// handler and no exit hook: when the host dies, the supervisor stops its trees (ADR-0005 §9).
 "use strict";
+
+const { existsSync } = require("node:fs");
+const { join } = require("node:path");
+
+/** The addon: `HUGR_OMNI_ADDON`, else this checkout's Cargo build (`cargo build -p hugr-omni-node`). Packages are W14's. */
+function addonPath() {
+  if (process.env.HUGR_OMNI_ADDON) return process.env.HUGR_OMNI_ADDON;
+  const file = { darwin: "libhugr_omni_node.dylib", win32: "hugr_omni_node.dll" }[process.platform] ?? "libhugr_omni_node.so";
+  const target = process.env.CARGO_TARGET_DIR ?? join(__dirname, "..", "..", "target");
+  const found = ["debug", "release"].map((profile) => join(target, profile, file)).find((path) => existsSync(path));
+  if (found === undefined) {
+    throw new Error(`hugr-omni: no native addon under ${target}: run \`cargo build -p hugr-omni-node\` (or set HUGR_OMNI_ADDON)`);
+  }
+  return found;
+}
+
+const addon = { exports: {} };
+process.dlopen(addon, addonPath());
+const native = addon.exports;
 
 class OmniError extends Error {
   constructor(code, message, result) {
     super(message);
     this.name = "OmniError";
     this.code = code;
-    if (result !== undefined) this.result = result;
+    if (result != null) this.result = result;
+  }
+}
+native.setup(OmniError); // the addon throws and rejects with this class
+
+/** A promise for `start()`, which may also throw synchronously (an option refused while the addon converts it). */
+function later(start) {
+  try {
+    return start();
+  } catch (e) {
+    return Promise.reject(e);
   }
 }
 
-const notYet = () => new OmniError("IO", "IO: not implemented yet (W13: native binding)");
-
-function run() {
-  return Promise.reject(notYet());
+/**
+ * One native cancellation per AbortSignal (one listener per signal, however many runs and children share it). Any other
+ * value is left to the addon, which refuses it as `INVALID_ARGUMENT` naming `signal`.
+ */
+const cancels = new WeakMap();
+function cancelOf(signal) {
+  if (typeof signal !== "object" || signal === null || typeof signal.addEventListener !== "function") return undefined;
+  let cancel = cancels.get(signal);
+  if (cancel === undefined) {
+    const made = new native.Cancel();
+    if (signal.aborted) made.cancel();
+    else signal.addEventListener("abort", () => made.cancel(), { once: true });
+    cancels.set(signal, (cancel = made));
+  }
+  return cancel;
 }
 
-function spawn() {
-  throw notYet();
+/** The single output consumer as an async iterable: claimed when iteration starts, detached for good when it ends. */
+const consumer = (child, lines) => ({ [Symbol.asyncIterator]: () => items(child.claim(lines)) });
+
+async function* items(stream) {
+  try {
+    for (let item = await stream.next(); item !== null; item = await stream.next()) yield item;
+  } finally {
+    stream.detach();
+  }
+}
+
+const asyncDispose = Symbol.asyncDispose ?? Symbol.for("Symbol.asyncDispose");
+
+class Child {
+  #native;
+  #exit;
+
+  constructor(native) {
+    this.#native = native;
+    // Asked once, at spawn, and handed to every wait(): while it is pending, the child holds the event loop.
+    this.#exit = native.exited();
+    this.#exit.catch(() => {}); // a failure is for wait() to report, never an unhandled rejection
+  }
+
+  get pid() {
+    return this.#native.pid;
+  }
+
+  get output() {
+    return consumer(this.#native, false);
+  }
+
+  lines() {
+    return consumer(this.#native, true);
+  }
+
+  get droppedBytes() {
+    return this.#native.droppedBytes();
+  }
+
+  write(data) {
+    return later(() => this.#native.write(data));
+  }
+
+  wait() {
+    return this.#exit;
+  }
+
+  stop(options) {
+    return later(() => this.#native.stop(options?.graceMs));
+  }
+
+  processes() {
+    return this.#native.processes();
+  }
+
+  /** `await using`: leaving the scope awaits `stop()`. */
+  [asyncDispose]() {
+    return this.stop().then(() => undefined);
+  }
+}
+
+class PipeChild extends Child {
+  #native;
+
+  constructor(native) {
+    super(native);
+    this.#native = native;
+  }
+
+  closeStdin() {
+    return this.#native.closeStdin();
+  }
+}
+
+class PtyChild extends Child {
+  #native;
+
+  constructor(native) {
+    super(native);
+    this.#native = native;
+  }
+
+  resize(cols, rows) {
+    this.#native.resize(cols, rows);
+  }
+}
+
+function spawn(command, args, options) {
+  const child = native.spawn(command, args ?? [], options, cancelOf(options?.signal));
+  return child.isPty ? new PtyChild(child) : new PipeChild(child);
+}
+
+function run(command, args, options) {
+  return later(() => native.run(command, args ?? [], options, cancelOf(options?.signal)));
 }
 
 module.exports = { run, spawn, OmniError };

@@ -47,9 +47,15 @@ linux:
     - if grep -q INTERP elf.txt; then echo "the supervisor is dynamically linked"; exit 1; fi
     - (cd bindings/node && npx -y -p typescript@5 tsc -p tsconfig.json && npx -y -p typescript@5 tsc -p test/tsconfig.json)
     - cargo build --workspace --bins
+    - cargo build -p hugr-omni-node
     - HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" cargo test -p omni-supervisor --no-fail-fast
     - cargo test --workspace --no-fail-fast -- $TEST_FILTER
     - node bindings/node/test/teeth.mjs
+    # C-TS-01 / C-TS-02: the contract and the idioms through the binding, on Node 22 and 24, Bun and Deno.
+    - for t in contract idioms; do node bindings/node/test/$t.mjs; done
+    - for t in contract idioms; do npx -y node@24 bindings/node/test/$t.mjs; done
+    - for t in contract idioms; do npx -y bun@1 bindings/node/test/$t.mjs; done
+    - for t in contract idioms; do npx -y deno@2 run -A bindings/node/test/$t.mjs; done
     # K4 spawn round trip, release build (Linux is the K4 reference).
     - cargo build --release --workspace --bins
     - cargo test --release -p hugr-omni --no-fail-fast -- k4
@@ -65,3 +71,10 @@ windows-2022:
     - rustup toolchain install
     - cargo build --workspace --bins
     - cargo test --workspace --no-fail-fast -- $env:TEST_FILTER
+    - Invoke-WebRequest https://nodejs.org/dist/v22.20.0/node-v22.20.0-win-x64.zip -OutFile node.zip
+    - Expand-Archive node.zip -DestinationPath C:\node
+    - $env:Path = "C:\node\node-v22.20.0-win-x64;$env:Path"
+    - cargo build -p hugr-omni-node
+    - node bindings/node/test/teeth.mjs
+    - node bindings/node/test/contract.mjs
+    - node bindings/node/test/idioms.mjs

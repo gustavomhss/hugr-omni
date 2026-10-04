@@ -146,6 +146,29 @@ test("PipeChild and PtyChild: only a pipe child has closeStdin, only a terminal 
   });
 });
 
+test("a value index.d.ts does not allow is INVALID_ARGUMENT naming the field and the value: thrown by spawn, rejected by run and the methods", async () => {
+  const options = [
+    [{ stdin: "bogus" }, 'stdin is "bogus"'],
+    [{ timeoutMs: "x" }, 'timeoutMs is "x"'],
+    [{ env: { OMNI_K: 1 } }, "env.OMNI_K is 1"],
+    [{ pty: { cols: "80" } }, 'pty.cols is "80"'],
+    [{ signal: {} }, "signal is an object"],
+  ];
+  for (const [given, says] of options) {
+    for (const e of [thrown(() => spawn(fixture, [], given), "INVALID_ARGUMENT"), await rejects(run(fixture, [], given), "INVALID_ARGUMENT")]) {
+      assert.ok(e.message.includes(says) && e.message.includes("pass "), e.message);
+    }
+  }
+  assert.ok(thrown(() => spawn(fixture, ["ok", 5]), "INVALID_ARGUMENT").message.includes("args[1] is 5"));
+  await withChild(["hang"], { stdin: "pipe" }, async (child) => {
+    assert.ok((await rejects(child.write(5), "INVALID_ARGUMENT")).message.includes("data is 5"));
+    assert.ok((await rejects(child.stop({ graceMs: "soon" }), "INVALID_ARGUMENT")).message.includes('graceMs is "soon"'));
+  });
+  // What the caller's own code throws is not the library's to rename.
+  const own = new Error("thrown by a getter");
+  assert.throws(() => spawn(fixture, [], { get cwd() { throw own; } }), (e) => e === own);
+});
+
 test("zero `any` in index.d.ts", () => {
   const types = readFileSync(join(root, "bindings/node/index.d.ts"), "utf8");
   assert.doesNotMatch(types.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""), /\bany\b/);
@@ -201,6 +224,15 @@ test("GC never kills a child: every reference dropped and a collection forced, t
     host.kill("SIGKILL");
     await host.end();
     await expectLife([child], false, BOUND); // the host's death ended it, not the collector
+  }, { gc: true }));
+
+test("GC never kills a child after its root exited: the collected Child's live descendant still runs, until the host dies", () =>
+  withHost("orphan", async (host) => {
+    const [descendant] = await host.marker("ORPHANED", 1);
+    await expectLife([descendant], true, 0);
+    host.kill("SIGKILL");
+    await host.end();
+    await expectLife([descendant], false, BOUND); // the host's death ended it (the supervisor's stop), not the collector
   }, { gc: true }));
 
 await runTests("idioms", 60_000);

@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 # bindings/node joins in W13 (it owns bindings/node/Cargo.toml and this line).
-members = ["crates/*"]
+members = ["crates/*", "bindings/node"]
 
 [workspace.package]
 version = "0.0.0"

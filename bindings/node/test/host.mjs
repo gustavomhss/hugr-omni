@@ -4,7 +4,8 @@
 //
 // Modes: `end` (the root exits when `release` gets a line; then this script just returns), `exit` (process.exit()) and
 // `throw` (an uncaught exception), both once the parent has written a line to this process's stdin, `wait` (idle until the
-// parent signals it), `retain` (spawn and never await), `gc` (drop every reference, force a collection).
+// parent signals it), `retain` (spawn and never await), `gc` (drop every reference, force a collection), `orphan` (the
+// same once the root has exited and its descendant lives on).
 
 import { untilTree } from "./markers.mjs";
 import { binaries, loadApi } from "./support.mjs";
@@ -23,19 +24,36 @@ const goAhead = () =>
     process.stdin.on("end", resolve);
   });
 
+/** Forces full collections, letting finalizers run between them. */
+async function collectAll() {
+  const collect = globalThis.Bun ? () => globalThis.Bun.gc(true) : globalThis.gc;
+  if (!collect) throw new Error("no way to force a garbage collection: run with --expose-gc (node), --v8-flags=--expose-gc (deno) or bun");
+  for (let round = 0; round < 10; round++) {
+    collect();
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
 const tree = ["ignore-term", "tree=2:resist", "ready"]; // a root and two descendants that all ignore the polite stop
 if (mode === "retain") {
   const child = spawn(fixture, [`watch=stdout:1:${release}`, "exit=0"]);
   say("SPAWNED", child.pid); // and nothing else: no await, no timer, no listener
 } else if (mode === "gc") {
-  const collect = globalThis.Bun ? () => globalThis.Bun.gc(true) : globalThis.gc;
-  if (!collect) throw new Error("no way to force a garbage collection: run with --expose-gc (node), --v8-flags=--expose-gc (deno) or bun");
   const pid = (() => spawn(fixture, ["hang"]).pid)(); // the Child is unreachable from here on
-  for (let round = 0; round < 10; round++) {
-    collect();
-    await new Promise((resolve) => setImmediate(resolve));
-  }
+  await collectAll();
   say("DROPPED", pid);
+  setInterval(() => {}, 2 ** 30); // keeps this process up on its own account: the parent ends it
+} else if (mode === "orphan") {
+  const descendant = await (async () => {
+    const child = spawn(fixture, ["tree=1:resist", "ready", "exit=0"], { graceMs: 500 });
+    const [pid] = await untilTree(child.lines(), 1);
+    await child.wait(); // the root has exited; its descendant, which ignores a polite stop, lives on
+    return pid;
+  })(); // the Child is unreachable from here on
+  await collectAll();
+  // A round trip through the same supervisor after the collection: whatever stop it caused was sent before this ends.
+  await spawn(fixture, ["exit=0"]).wait();
+  say("ORPHANED", descendant);
   setInterval(() => {}, 2 ** 30); // keeps this process up on its own account: the parent ends it
 } else {
   const child =
