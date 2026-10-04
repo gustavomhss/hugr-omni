@@ -456,6 +456,16 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **DoD:** suíte verde no `windows.yml`; o Codex tenta achar uma entrada que vire comando.
 - **Não fazer:** criar e fechar o ConPTY (`pty_windows`, que é do W12w; o `CreateProcessW` com o atributo `PSEUDOCONSOLE` é deste WP).
 
+#### W06b · Stop no Windows sob o runner do GitLab
+- **Agente:** Opus · **Depende:** W06, B3 · **Escreve:** `crates/omni-supervisor/src/windows/**`, `crates/omni-supervisor/tests/windows*.rs`
+- **Objetivo:** o prazo único do stop vale no Windows também numa máquina lenta e sem console visível, e o teste da árvore que se reproduz entre as varreduras passa ali.
+- **Completude:** SUP-W no runner Windows do GitLab (Server 2022): `stopped_arrives_only_once_every_member_is_gone_even_ones_born_between_polls` verde em 3 pipelines seguidos.
+- **Sucesso:** a causa das duas falhas observadas é nomeada com evidência (CTRL_BREAK que não chega à raiz; stop de graça 2000 ms que levou 5230 ms) e corrigida no supervisor ou declarada no GUARANTEES com o limite medido.
+- **Invariantes:** ADR-0005 R1, R2, R5; o prazo do stop é um só para a árvore inteira; nunca breakaway; nada de afrouxar asserção sem decisão do lead.
+- **Qualidade:** diagnóstico mínimo e removível; a correção cita a evidência do log.
+- **DoD:** 3 pipelines Windows verdes seguidos (o lead dispara); o Codex revisa a mudança.
+- **Não fazer:** mexer no `pty_windows` ou fora do supervisor.
+
 #### W07 · Child: kill de árvore e saída
 - **Agente:** Opus · **Depende:** W04, W05, W06 · **Escreve:** `crates/hugr-omni/src/process/**`, exceto `deadline.rs` e `run.rs` (do W09)
 - **Completude:** C-KILL-01, C-KILL-02, C-KILL-03, C-EXIT-01, C-PROC-01, C-SCOPE-01.
@@ -511,7 +521,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Agente:** Opus · **Depende:** B2, B3 · **Escreve:** `bindings/node/{src,lib}/**` (Rust dividido em `child`, `run`, `error`, `convert`), `bindings/node/{index.js,Cargo.toml,build.rs}`, a linha `members` do `Cargo.toml` da raiz
 - **Completude:** C-TS-01 (idiomas e host TS), C-TS-02 (todos os cenários via TS em Node 22/24, Bun e Deno).
 - **Sucesso:** os quickstarts TS da seção 3 rodam como estão escritos, nos 3 runtimes.
-- **Invariantes:** zero lógica de processo em JS; o GC nunca mata o filho; hook de saída do host conforme o ADR-0002.
+- **Invariantes:** zero lógica de processo em JS; o GC nunca mata o filho; nenhum handler de sinal nem hook de saída no host (ADR-0005 §9): na morte do host, quem limpa é o supervisor.
 - **Qualidade:** wrapper JS com ≤ ~200 linhas; `index.d.ts` intocado; zero `any`.
 - **DoD:** QA-A, QA-B e QA-E em Node locais com K1 = K2 = 0; o Codex revisa a fronteira FFI.
 - **Não fazer:** mexer em `package.json` (é do W14).
