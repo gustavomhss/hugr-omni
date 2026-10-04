@@ -39,6 +39,10 @@ linux:
   script:
     - python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
     - python3 scripts/plan-sections-check.py
+    - node --test scripts/surface-check/surface.test.mjs scripts/guarantees-check/check.test.mjs
+    - node scripts/surface-check/parity.mjs
+    - node scripts/surface-check/binding.mjs
+    - node scripts/guarantees-check/check.mjs
     - cargo fmt --all -- --check
     - cargo clippy --workspace --all-targets -- -D warnings
     - cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
@@ -56,6 +60,7 @@ linux:
     - for t in contract idioms; do npx -y node@24 bindings/node/test/$t.mjs; done
     - for t in contract idioms; do npx -y bun@1 bindings/node/test/$t.mjs; done
     - for t in contract idioms; do npx -y deno@2 run -A bindings/node/test/$t.mjs; done
+    - node scripts/readme-check/check.mjs
     # K4 spawn round trip, release build (Linux is the K4 reference).
     - cargo build --release --workspace --bins
     - cargo test --release -p hugr-omni --no-fail-fast -- k4
@@ -78,3 +83,4 @@ windows-2022:
     - node bindings/node/test/teeth.mjs
     - node bindings/node/test/contract.mjs
     - node bindings/node/test/idioms.mjs
+    - node scripts/readme-check/check.mjs

@@ -42,6 +42,11 @@ for:
           export PATH="$HOME/.cargo/bin:$PATH"
           python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
           python3 scripts/plan-sections-check.py
+          # Parity, architecture and guarantees checks (W18), with their teeth.
+          node --test scripts/surface-check/surface.test.mjs scripts/guarantees-check/check.test.mjs
+          node scripts/surface-check/parity.mjs
+          node scripts/surface-check/binding.mjs
+          node scripts/guarantees-check/check.mjs
           cargo fmt --all -- --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
@@ -66,6 +71,8 @@ for:
           for t in contract idioms; do npx -y node@24 bindings/node/test/$t.mjs; done
           for t in contract idioms; do npx -y bun@1 bindings/node/test/$t.mjs; done
           for t in contract idioms; do npx -y deno@2 run -A bindings/node/test/$t.mjs; done
+          # Every README and guide code block runs (C-DOC-01).
+          node scripts/readme-check/check.mjs
           # K4 spawn round trip, release build (Linux is the K4 reference).
           cargo build --release --workspace --bins
           cargo test --release -p hugr-omni --no-fail-fast -- k4
@@ -100,6 +107,7 @@ for:
           if [ -s "$HOME/.nvm/nvm.sh" ]; then source "$HOME/.nvm/nvm.sh"; nvm use 22 || nvm install 22; fi
           node --version
           for t in teeth contract idioms; do node bindings/node/test/$t.mjs; done
+          node scripts/readme-check/check.mjs
           # K9 on this Mac's CPU.
           T=$(rustc -vV | sed -n 's/^host: //p'); case "$T" in aarch64*) ID=darwin-arm64;; *) ID=darwin-x64;; esac
           cargo build --release -p hugr-omni-node -p omni-supervisor --target "$T"
@@ -124,6 +132,7 @@ for:
       - cmd: node bindings/node/test/teeth.mjs
       - cmd: node bindings/node/test/contract.mjs
       - cmd: node bindings/node/test/idioms.mjs
+      - cmd: node scripts/readme-check/check.mjs
       - cmd: cargo build --release -p hugr-omni-node -p omni-supervisor --target x86_64-pc-windows-msvc
       - cmd: node bindings\node\npm\pack.mjs dist win32-x64-msvc
       - cmd: node bindings\node\npm\verify.mjs dist\tarballs node

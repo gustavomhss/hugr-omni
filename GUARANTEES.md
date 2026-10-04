@@ -34,7 +34,7 @@ The promises themselves are `docs/api-contract.md`; the items are `docs/acceptan
 | C-KILL-03 deliberate escape behaves per tier | planned | planned | planned | scenario |
 | C-EXIT-01 exit codes and reason | planned | planned | planned | scenario |
 | C-PROC-01 `processes()` = what `stop()` reaches | planned | planned | planned | scenario |
-| C-SCOPE-01 scope exit kills the tree | planned | planned | planned | scenario |
+| C-SCOPE-01 scope exit kills the tree | planned | planned | planned | idiom tests |
 | C-TMO-01 / C-TMO-02 timeout and cancellation | planned | planned | planned | scenarios + K2 |
 | C-HOST-01 host exit leaves trees per tier | planned | planned | planned | idiom tests + K1 |
 | C-PTY-01..04 terminal size, interaction, no lost output, tree stop | planned | planned | planned | scenarios |
