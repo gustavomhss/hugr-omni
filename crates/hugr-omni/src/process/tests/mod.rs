@@ -220,7 +220,33 @@ fn assert_dead(pids: &[u32], within: Duration) {
         if living.is_empty() {
             return;
         }
-        assert!(Instant::now() < deadline, "alive per the OS: {living:?} (of {pids:?})");
+        assert!(
+            Instant::now() < deadline,
+            "alive per the OS: {living:?} (of {pids:?}){}",
+            describe(&living)
+        );
         std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+/// Windows: who holds each pid now (a reused pid shows another command line), for the failure message.
+fn describe(pids: &[u32]) -> String {
+    if std::env::consts::OS != "windows" {
+        return String::new();
+    }
+    let filter = pids
+        .iter()
+        .map(|p| format!("ProcessId={p}"))
+        .collect::<Vec<_>>()
+        .join(" or ");
+    let query = format!(
+        "Get-CimInstance Win32_Process -Filter '{filter}' | Format-List ProcessId,ParentProcessId,CreationDate,CommandLine"
+    );
+    match Command::new("powershell")
+        .args(["-NoProfile", "-Command", &query])
+        .output()
+    {
+        Ok(out) => format!("\n{}", String::from_utf8_lossy(&out.stdout).trim()),
+        Err(e) => format!("\n(powershell: {e})"),
     }
 }

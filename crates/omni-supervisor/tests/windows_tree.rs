@@ -317,7 +317,8 @@ fn stopped_arrives_only_once_every_member_is_gone_even_ones_born_between_polls()
     t.stdout.line("READY");
     // The barrier: the root starts descendants only once the stop's CTRL_BREAK reaches it, and keeps
     // starting them until the Job is terminated at the deadline, so the last ones live between two polls.
-    timing("breeding tree, grace 500", host.stop(t.id, 500));
+    // A generous grace: under load the CTRL_BREAK can take a while to reach the root and open the barrier.
+    timing("breeding tree, grace 2000", host.stop(t.id, 2000));
     // The oracle, independent of the supervisor: each descendant logged its own pid and creation time; the
     // OS must report every one of them gone at the moment Stopped arrived.
     let logged = std::fs::read_to_string(&log).unwrap_or_default();
