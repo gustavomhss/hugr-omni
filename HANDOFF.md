@@ -69,6 +69,18 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Docker Desktop: subir com `open -a Docker` se cair; cada agente usa o próprio volume `omni-target-<WP>`.
 - O material para investidores está fora do repo: `~/Documents/HuGR/omni-investidores.html`.
 
+## Estado em 2026-10-05 (tarde)
+
+- `bundle/B4` (não mergeada): W06b, W13, W14, Q1, W18, W18b, Q2. Gates locais verdes (macOS; Linux no Docker).
+- Revisão: o Codex acabou; revisor = agente Claude separado, só leitura (PLAN Apêndice E).
+- Para fechar o v0.1:
+  1. CI no Windows e no macOS arm64: AppVeyor espera o usuário autorizar o GitLab no AppVeyor (o GitLab ficou sem
+     minutos). Depois, merge da `bundle/B4` na `main`.
+  2. K4 do Rust no macOS (tempo até o pid ~+0,7 ms): medir no CI quieto; se ficar fora, decisão do usuário.
+  3. O Owner assina `docs/ux/Q2-cold-users-v0.1.md`.
+  4. W21 release: publicar no npm exige o "sim" do usuário (e uma conta npm); ordem: os 5 pacotes de plataforma,
+     depois `hugr-omni`; tirar `PRE_RELEASE_INSTALL` do readme-check.
+
 ## Estado em 2026-10-05
 
 - `bundle/B4` (não mergeada): W06b, W13 (binding Node/Bun/Deno), W14 (npm), Q1 (harness de QA). Gates locais verdes
