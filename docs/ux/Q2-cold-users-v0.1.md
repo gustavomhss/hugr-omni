@@ -41,6 +41,17 @@ in about 1 ms; the abort landed about 7 ms after 500 ms.
 | `resize()` effect and `stty` row/column order; macOS `/tmp` is `/private/tmp` | one line each (W18b) |
 | the README's relative links pointed to files the test workspace did not have | test setup, not the product: the npm README uses absolute links |
 
+## Rerun after W18b (three new agents, strict TypeScript)
+
+Three more fresh agents did the same 15 tasks, this time in TypeScript type-checked with `tsc --strict`
+(`nodenext`) and run with `tsx` (and bun for `await using`): **15/15 succeeded, each in about a minute or less, no
+blocker.** Their install note (the lead's test setup) pointed at the previous main tarball, so their `stdout` typing
+friction came from the old `index.d.ts`; the lead re-checked the new package with strict `tsc`: `r.stdout.trim()`
+compiles and `text: false` gives `Uint8Array`. Real frictions left, all fixed in the docs (747c8c0 and the shell
+recipe): a fresh `npm init -y` project is CommonJS, so top-level `await` needs `npm pkg set type=module` or `.mts`;
+TypeScript needs `@types/node` for `process`; a Ctrl-C to a silent command in a shell should wait until
+`processes()` lists it.
+
 The full user reports and their scripts are kept with the lead's review records.
 
 Signed by the owner: ______________________

@@ -122,6 +122,8 @@ console.log((await term.wait()).reason);
 - `term.resize(cols, rows)` changes the size later, and the program sees it at once (section 9 reads it back with
   `stty size`). `run()` with `pty` takes no `input`: nobody types.
 - For a conversation of several steps, take the iterator once instead of looping once (section 9).
+- To Ctrl-C a command that prints nothing (a `sleep` in a shell), first wait until `term.processes()` lists it;
+  otherwise the Ctrl-C may reach the shell before the command starts.
 
 ## 4. Cleanup: cancel, errors, and the end of your own process
 
