@@ -39,8 +39,10 @@ use members::Members;
 use queues::{Event, Inbox, Item, MAX_REPLIES, MAX_TREES, Outbox, Refused};
 use tree::Tree;
 
-/// How long to wait, after the host died, beyond the longest tree deadline.
-const HOST_DEATH_SLACK: Duration = Duration::from_secs(2);
+/// How long to wait, after the host died, beyond the longest tree deadline, before exiting 1 with trees not proven
+/// gone. The OS can take seconds to tear a busy Job down on a saturated machine (W06b: up to 3.2 s past the deadline
+/// on a 2-vCPU runner); the trees die anyway, with the Jobs, when the supervisor exits.
+const HOST_DEATH_SLACK: Duration = Duration::from_secs(5);
 /// Membership polling while a tree is stopping, and while a root's descendants linger.
 const POLL_STOPPING: Duration = Duration::from_millis(10);
 const POLL_LINGERING: Duration = Duration::from_millis(100);

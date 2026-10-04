@@ -66,7 +66,8 @@ pub(super) fn counts(job: &OwnedHandle) -> Option<(u32, u32)> {
 
 /// Forced stop: every member, at once.
 pub(super) fn terminate(job: &OwnedHandle) {
-    // SAFETY: a valid Job handle. A failure leaves the members alive; the deadline pass retries.
+    // SAFETY: a valid Job handle. A failure leaves the members alive; `Tree::settle` repeats the pass until
+    // the Job is empty.
     unsafe { TerminateJobObject(job.as_raw_handle(), KILLED) };
 }
 

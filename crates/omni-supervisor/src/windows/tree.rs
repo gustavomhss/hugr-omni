@@ -90,7 +90,7 @@ impl Tree {
         self.enforce(now);
     }
 
-    /// Forces the tree once its deadline has passed.
+    /// Forces the tree once its deadline has passed (`settle` repeats the pass until the Job is empty).
     pub(super) fn enforce(&mut self, now: Instant) {
         if let Some(s) = self.stop.as_mut().filter(|s| !s.forced && now >= s.deadline) {
             s.forced = true;
@@ -113,8 +113,18 @@ impl Tree {
     /// Gone = the root exited, the Job has no live member (an unknown count is not zero), and every process
     /// that ever joined it is proven gone (`Members::prove`), or `PROOF_BOUND` has passed since the Job was
     /// first seen empty (then one diagnostic line says why). Returns the `Stop` waiters to answer, once.
+    /// While a forced stop's Job still has members, each call repeats the forced pass.
     pub(super) fn settle(&mut self, members: &Members, diag: &Diag, now: Instant) -> Option<Vec<u64>> {
-        if self.gone || self.exit.is_none() || job::active(&self.job) != Some(0) {
+        if self.gone {
+            return None;
+        }
+        let active = job::active(&self.job);
+        if active != Some(0) && self.stop.as_ref().is_some_and(|s| s.forced) {
+            // Forced means until the Job is empty, as SIGKILL until the session is empty on Unix: what a pass
+            // left alive (it failed, or a process was still joining the Job while it ran) meets the next one.
+            job::terminate(&self.job);
+        }
+        if self.exit.is_none() || active != Some(0) {
             return None;
         }
         let since = *self.empty_since.get_or_insert(now);

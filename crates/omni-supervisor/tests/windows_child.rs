@@ -7,6 +7,7 @@
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::os::windows::ffi::OsStringExt;
+use std::os::windows::io::{AsRawHandle, RawHandle};
 use std::os::windows::process::CommandExt;
 use std::process::{Command, Stdio};
 use std::sync::{Condvar, Mutex};
@@ -56,8 +57,8 @@ unsafe extern "system" fn ignore_ctrl(_: u32) -> i32 {
 /// - `exit <code>`;
 /// - `chain <level> <depth> <resist> <root-exits>`: a chain of descendants; each prints `PID <level> <pid>`,
 ///   the root prints `READY` (or exits, if asked); `resist` ignores CTRL_BREAK/C/CLOSE; all hang;
-/// - `breed <log>`: prints `READY`; on CTRL_BREAK starts `logpid <log>` descendants until it is killed;
-/// - `logpid <log>`: appends `<pid> <creation time>` to `log` (one write) and hangs;
+/// - `breed <log>`: prints `READY`; on CTRL_BREAK starts hanging descendants until it is killed, appending
+///   `<pid> <creation time>` to `log` (one write) for each one as soon as it exists;
 /// - `nest`: puts itself in a Job of its own (nested in the supervisor's), then runs `chain 0 2 0 0`.
 pub fn run(args: &[OsString]) -> ! {
     let words: Vec<&str> = args.iter().map(|a| a.to_str().unwrap_or("")).collect();
@@ -100,24 +101,6 @@ pub fn run(args: &[OsString]) -> ! {
                 assert_ne!(AssignProcessToJobObject(job, GetCurrentProcess()), 0);
             }
             chain(0, "2", "0", "0")
-        }
-        ["logpid", log] => {
-            let mut born = [FILETIME::default(); 4];
-            let [c, e, k, u] = &mut born;
-            // SAFETY: the current-process pseudo handle and four valid out pointers.
-            assert_ne!(unsafe { GetProcessTimes(GetCurrentProcess(), c, e, k, u) }, 0);
-            let born = u64::from(c.dwHighDateTime) << 32 | u64::from(c.dwLowDateTime);
-            let line = format!("{} {born}\n", std::process::id());
-            std::fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(log)
-                .unwrap()
-                .write_all(line.as_bytes())
-                .unwrap();
-            loop {
-                std::thread::park();
-            }
         }
         other => panic!("unknown child mode {other:?}"),
     }
@@ -179,14 +162,24 @@ unsafe extern "system" fn start_breeding(_: u32) -> i32 {
 }
 
 /// The barrier: nothing is started before the graceful stop's CTRL_BREAK arrives; from then on descendants
-/// (`logpid`) are started one after another until the Job is terminated.
+/// (hanging `chain`s) are started one after another until the Job is terminated. Each one is logged here as
+/// soon as it exists, never by itself: on a slow machine the descendants of this unthrottled loop may never
+/// get to run before the deadline (W06b: 875 created, 46 started, on GitLab's 2-vCPU runner), and the oracle
+/// must cover the ones the Job's termination caught still starting.
 fn breed(log: &str) -> ! {
     // SAFETY: a handler that lives as long as the process.
     unsafe { SetConsoleCtrlHandler(Some(start_breeding), 1) };
     let log = log.to_string();
     std::thread::spawn(move || {
         drop(BREAK.wait_while(BREAK_SEEN.lock().unwrap(), |seen| !*seen).unwrap());
-        while let Ok(mut c) = child_cmd(&["logpid", &log]).stdout(Stdio::null()).spawn() {
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&log)
+            .unwrap();
+        while let Ok(mut c) = child_cmd(&["chain", "0", "0", "0", "0"]).stdout(Stdio::null()).spawn() {
+            let line = format!("{} {}\n", c.id(), created(c.as_raw_handle()));
+            file.write_all(line.as_bytes()).unwrap();
             std::thread::spawn(move || c.wait());
         }
     });
@@ -194,6 +187,15 @@ fn breed(log: &str) -> ! {
     loop {
         std::thread::park();
     }
+}
+
+/// A process's creation time (FILETIME as one number).
+fn created(process: RawHandle) -> u64 {
+    let mut times = [FILETIME::default(); 4];
+    let [c, e, k, u] = &mut times;
+    // SAFETY: a process handle with query access and four valid out pointers.
+    assert_ne!(unsafe { GetProcessTimes(process, c, e, k, u) }, 0);
+    u64::from(c.dwHighDateTime) << 32 | u64::from(c.dwLowDateTime)
 }
 
 fn chain(level: u32, depth: &str, resist: &str, root_exits: &str) -> ! {
