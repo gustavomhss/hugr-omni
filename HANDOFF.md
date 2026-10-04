@@ -69,6 +69,17 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Docker Desktop: subir com `open -a Docker` se cair; cada agente usa o próprio volume `omni-target-<WP>`.
 - O material para investidores está fora do repo: `~/Documents/HuGR/omni-investidores.html`.
 
+## Estado em 2026-10-05
+
+- `bundle/B4` (não mergeada): W06b, W13 (binding Node/Bun/Deno), W14 (npm), Q1 (harness de QA). Gates locais verdes
+  (macOS nativo; Linux no Docker com TS em Node/Bun/Deno; K9 linux-x64 em container limpo). Falta Windows e
+  macOS arm64: precisam do AppVeyor, que espera o usuário autorizar o GitLab no AppVeyor.
+- Em execução: W18 (docs + checks), brief em `~/Documents/HuGR/hugr-omni-reviews/briefs/W18.brief.txt`.
+- Depois: Q2 (usuários frios só com o README), W21 (release: publicar exige aprovação do usuário; ordem: os 5
+  pacotes de plataforma antes do `hugr-omni`).
+- Ponto aberto para o release: K4 do Rust (tempo até o pid) no macOS fica ~+0,7 ms acima do stdlib em máquina
+  local; medir no CI quieto (macOS do AppVeyor) e decidir com o usuário se ficar fora.
+
 ## Estado em 2026-10-04
 
 - Repo no GitLab (`gitlab.com/gmhelmold/hugr-omni`), CI nos runners do GitLab (minutos grátis; AppVeyor depois).
