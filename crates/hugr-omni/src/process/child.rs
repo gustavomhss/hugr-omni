@@ -33,8 +33,8 @@ pub(super) struct Inner {
     pub(super) life: Life,
     pub(super) pumps: Pumps,
     stdin: Option<Stdin>,
-    /// The command's grace, for `stop(None)`.
-    grace: Duration,
+    /// The command's grace, for `stop(None)` and the deadline (`deadline::arm`).
+    pub(super) grace: Duration,
 }
 
 impl Inner {

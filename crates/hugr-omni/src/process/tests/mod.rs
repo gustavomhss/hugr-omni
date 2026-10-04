@@ -4,7 +4,10 @@
 //! `cargo build --workspace --bins`. Liveness always comes from the OS, never from the library, and every wait is
 //! bounded: a stop that does not finish fails, it never hangs.
 
+mod agent_loop;
+mod deadline;
 mod exit;
+mod host;
 mod scope;
 mod tree;
 
