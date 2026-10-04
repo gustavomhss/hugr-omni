@@ -7,16 +7,44 @@
 const { existsSync } = require("node:fs");
 const { join } = require("node:path");
 
-/** The addon: `HUGR_OMNI_ADDON`, else this checkout's Cargo build (`cargo build -p hugr-omni-node`). Packages are W14's. */
-function addonPath() {
-  if (process.env.HUGR_OMNI_ADDON) return process.env.HUGR_OMNI_ADDON;
+/** The platform packages `hugr-omni-<id>` (ADR-0004): each holds the addon and, next to it, the supervisor. */
+const PLATFORMS = {
+  "win32-x64": "win32-x64-msvc",
+  "darwin-arm64": "darwin-arm64",
+  "darwin-x64": "darwin-x64",
+  "linux-x64": "linux-x64-gnu",
+  "linux-arm64": "linux-arm64-gnu",
+};
+
+/** This checkout's Cargo build (`cargo build -p hugr-omni-node`), or `undefined`. */
+function checkoutBuild() {
   const file = { darwin: "libhugr_omni_node.dylib", win32: "hugr_omni_node.dll" }[process.platform] ?? "libhugr_omni_node.so";
   const target = process.env.CARGO_TARGET_DIR ?? join(__dirname, "..", "..", "target");
-  const found = ["debug", "release"].map((profile) => join(target, profile, file)).find((path) => existsSync(path));
-  if (found === undefined) {
-    throw new Error(`hugr-omni: no native addon under ${target}: run \`cargo build -p hugr-omni-node\` (or set HUGR_OMNI_ADDON)`);
+  return ["debug", "release"].map((profile) => join(target, profile, file)).find((path) => existsSync(path));
+}
+
+/** The addon: `HUGR_OMNI_ADDON`, else the installed platform package, else this checkout's Cargo build. */
+function addonPath() {
+  if (process.env.HUGR_OMNI_ADDON) return process.env.HUGR_OMNI_ADDON;
+  const platform = `${process.platform}-${process.arch}`;
+  const id = PLATFORMS[platform];
+  if (id !== undefined) {
+    try {
+      return require.resolve(`hugr-omni-${id}`); // its `main` is the addon
+    } catch {
+      // not installed: a checkout, or the optional dependencies were skipped
+    }
   }
-  return found;
+  const built = checkoutBuild();
+  if (built !== undefined) return built;
+  if (id === undefined) {
+    throw new Error(`hugr-omni: ${platform} is not supported. Supported: ${Object.values(PLATFORMS).join(", ")} (Linux needs glibc).`);
+  }
+  throw new Error(
+    `hugr-omni: the package hugr-omni-${id} (the native addon for ${platform}) is not installed. Reinstall hugr-omni with optional ` +
+      `dependencies enabled (no --omit=optional / --no-optional)${process.platform === "linux" ? "; Linux needs glibc, Alpine (musl) is not supported" : ""}. ` +
+      "In a checkout, run `cargo build -p hugr-omni-node`; HUGR_OMNI_ADDON overrides the path.",
+  );
 }
 
 const addon = { exports: {} };
