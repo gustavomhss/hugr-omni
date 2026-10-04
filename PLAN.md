@@ -536,7 +536,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** mexer em `pyproject.toml`.
 
 #### W14 · Empacotamento (npm, PyPI, crates.io)
-- **Agente:** Sonnet · **Depende:** W00, ADR-0004 · **Escreve:** `bindings/node/{package.json,npm/**}`, `bindings/python/pyproject.toml`, `crates/hugr-omni/examples/**`, `.github/workflows/pkg.yml`
+- **Agente:** Sonnet · **Depende:** W00, ADR-0004 · **Escreve:** `bindings/node/{package.json,npm/**}`, `bindings/python/pyproject.toml`, `crates/hugr-omni/examples/**` (os jobs de CI vão para o `.gitlab-ci.yml`, que é do lead: o WP entrega os comandos)
 - **Completude:** C-PKG-01 — no v0.1, só npm (Node/Bun/Deno), e cada pacote de plataforma leva o `hugr-omni-supervisor` (musl estático no Linux); PyPI e crates.io entram no v0.2.
 - **Sucesso:** K9 = 100%: instalação limpa nos 5 alvos × npm/bun/deno (v0.1), hello em < 30 s. Snippets prontos no ADR-0004.
 - **Invariantes:** nenhum `postinstall` que compile ou baixe; nenhuma sdist que compile de surpresa.
@@ -545,7 +545,7 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** publicar.
 
 #### W18 · Docs + checks de paridade e garantias
-- **Agente:** Sonnet · **Depende:** B4 · **Escreve:** `README.md`, `*/README.md`, `docs/guide/**`, `scripts/{readme-check,surface-check,guarantees-check}/**`, `.github/workflows/docs.yml`
+- **Agente:** Sonnet · **Depende:** B4 · **Escreve:** `README.md`, `*/README.md`, `docs/guide/**`, `scripts/{readme-check,surface-check,guarantees-check}/**` (CI: comandos entregues ao lead para o `.gitlab-ci.yml`)
 - **Completude:** C-DOC-01, C-PAR-01, C-GUA-01, C-ARC-01.
 - **Sucesso:** um dev entende e usa em 5 minutos; o README abre com TS e mostra os números do QA contra o stdlib.
 - **Invariantes:** todo bloco de código roda no CI; um check que não consegue ler sua entrada falha alto.
@@ -554,9 +554,9 @@ Fase 2-3 S4 → SB1 → SB2 · SB3 → SB4 → SB6                              
 - **Não fazer:** site de docs.
 
 #### Q1 · Harness de QA + KPIs
-- **Agente:** Opus · **Depende:** W00 (o harness começa contra o stdlib e liga no omni quando o B2 entra) · **Escreve:** `qa/**`, `.github/workflows/qa.yml`
-- **Completude:** QA-01: workloads QA-A..E rodando nas 3 linguagens, com omni e com o baseline stdlib; relatório K1–K8 por OS em JSON + Markdown.
-- **Sucesso:** um comando (`qa/run --quick` ou `--full`) devolve a tabela de KPIs, omni vs stdlib, em macOS, Linux (Docker) e Windows (CI).
+- **Agente:** Opus · **Depende:** W00 (o harness começa contra o stdlib e liga no omni quando o B2 entra) · **Escreve:** `qa/**` (CI: comandos entregues ao lead para o `.gitlab-ci.yml`)
+- **Completude:** QA-01: workloads QA-A..E rodando em Rust e TS no v0.1 (Python no v0.2), com omni e com o baseline stdlib (`std::process`, `child_process`); relatório K1–K8 por OS em JSON + Markdown.
+- **Sucesso:** um comando (`qa/run --quick` ou `--full`) devolve a tabela de KPIs, omni vs stdlib, em macOS (local), Linux (Docker local e CI) e Windows (CI do GitLab).
 - **Invariantes:** a contagem de órfãos é medida pelo OS (árvore de processos real), nunca inferida; os repos dos workloads são fixados por commit e rodam sem rede.
 - **Qualidade:** quick ≤ 5 min local; full ≤ 30 min por OS; um relatório legível por humano.
 - **DoD:** o lead roda o quick, injeta um órfão de propósito e vê K1 falhar (teste de dentes).
