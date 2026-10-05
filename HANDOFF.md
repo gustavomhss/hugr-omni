@@ -23,7 +23,8 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
     `hugr-omni-runner-config`; imagem dos jobs `omni-ci-linux:1` de `scripts/ci.Dockerfile`; volumes `omni-cargo`,
     `omni-ci-target`, `omni-npm`). Tag `omni-linux`, só refs protegidas (`main`, `bundle/*`, `v*`). Runner Windows:
     falta uma máquina (tag `omni-windows`; ligar com a variável de projeto `OMNI_WINDOWS=1`). macOS: o lead roda o
-    mesmo script na máquina dele.
+    mesmo script na máquina dele. Nada roda no push: o lead dispara um pipeline por bundle (`glab ci run -b <branch>`,
+    ou pela API); o job fica em 2 CPUs e 4 GB.
   - Nunca trocar contas nem mexer em config global.
 
 ## Repo (histórico do GitHub)

@@ -90,9 +90,9 @@ docker run --rm -v "$PWD":/w -w /w -v omni-cargo:/usr/local/cargo/registry -v om
 - **Supervisor tests in Docker** need `--privileged`: the Linux PID-reuse test steers `ns_last_pid`, and it fails
   rather than skips without it.
 - **CI** is one script, `node scripts/ci.mjs` (the fast gate; `--release` adds the release checks), run by
-  self-hosted GitLab runners (`.gitlab-ci.yml`: Linux in Docker on the lead's machine, Windows once registered) for
-  `main` and `bundle/*`, and on demand. macOS is the lead's machine, running the same script. Only the lead starts
-  CI.
+  self-hosted GitLab runners (`.gitlab-ci.yml`: Linux in Docker on the lead's machine, Windows once registered).
+  Nothing runs on push: the lead starts one pipeline per bundle, and a `v*` tag runs one. macOS is the lead's machine,
+  running the same script. Only the lead starts CI.
 - **First time:** `rustup target add x86_64-pc-windows-msvc --toolchain 1.98.0`.
 - **Disk is limited:** at most 2 heavy Rust builds at once on this machine. Delete your worktree's `target/` when
   you stop.
