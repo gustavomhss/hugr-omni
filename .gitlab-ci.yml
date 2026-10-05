@@ -1,11 +1,12 @@
-# CI on GitLab's hosted runners (free compute minutes; AppVeyor, appveyor.yml, takes over later). Pushes to main
-# and bundle/* run it, and so do pipelines started by hand or by the API (any branch, optionally with TEST_FILTER);
-# wp/* never does. macOS has no free hosted runner: the lead's cold gate on macOS covers it.
+# CI on self-hosted runners only (GitLab's free minutes ran out). Every job runs the same gate, scripts/ci.mjs: a push
+# to main or bundle/* that changes code runs the fast gate on warm caches (minutes); a v* tag, or a pipeline started by
+# hand or by the API with RELEASE=1, adds the release checks. The runners take only protected refs. macOS is the
+# lead's machine: `node scripts/ci.mjs` there, outside GitLab.
 workflow:
   rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
     - if: $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH =~ /^bundle\//)
-      # A push that changes only documents runs nothing (minutes are limited).
       changes:
         - crates/**/*
         - bindings/**/*
@@ -18,69 +19,24 @@ workflow:
 
 variables:
   TEST_FILTER: ""
-  CARGO_TERM_COLOR: always
+  RELEASE: ""
+  GIT_DEPTH: "20"
 
-# Linux: the static checks, the musl supervisor, the whole suite, the TS runner's teeth and K4.
+# The lead's Docker host (image: scripts/ci.Dockerfile). Privileged: the Linux PID-reuse test steers ns_last_pid.
 linux:
-  image: rust:1.96-bookworm
-  tags: [saas-linux-small-amd64]
-  timeout: 90m
+  tags: [omni-linux]
+  image: omni-ci-linux:1
+  timeout: 30m
   variables:
-    CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
-  cache:
-    key: cargo-linux
-    paths: [.cargo-home/registry]
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq python3 xz-utils > /dev/null
-    - curl -fsSL https://nodejs.org/dist/v22.20.0/node-v22.20.0-linux-x64.tar.xz | tar -xJ -C /opt
-    - export PATH="/opt/node-v22.20.0-linux-x64/bin:$CARGO_HOME/bin:$PATH"
-    - rustup toolchain install
-    - rustup target add x86_64-pc-windows-msvc x86_64-unknown-linux-musl
+    CARGO_TARGET_DIR: /ci-target
   script:
-    - python3 scripts/file-size-guard.py && python3 scripts/test_file_size_guard.py
-    - python3 scripts/plan-sections-check.py
-    - node --test scripts/surface-check/surface.test.mjs scripts/guarantees-check/check.test.mjs
-    - node scripts/surface-check/parity.mjs
-    - node scripts/surface-check/binding.mjs
-    - node scripts/guarantees-check/check.mjs
-    - cargo fmt --all -- --check
-    - cargo clippy --workspace --all-targets -- -D warnings
-    - cargo clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
-    - cargo build --release -p omni-supervisor --target x86_64-unknown-linux-musl
-    - readelf -l target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor > elf.txt
-    - if grep -q INTERP elf.txt; then echo "the supervisor is dynamically linked"; exit 1; fi
-    - (cd bindings/node && npx -y -p typescript@5 tsc -p tsconfig.json && npx -y -p typescript@5 tsc -p test/tsconfig.json)
-    - cargo build --workspace --bins
-    - cargo build -p hugr-omni-node
-    - HUGR_OMNI_SUPERVISOR="$PWD/target/x86_64-unknown-linux-musl/release/hugr-omni-supervisor" cargo test -p omni-supervisor --no-fail-fast
-    - cargo test --workspace --no-fail-fast -- $TEST_FILTER
-    - node bindings/node/test/teeth.mjs
-    # C-TS-01 / C-TS-02: the contract and the idioms through the binding, on Node 22 and 24, Bun and Deno.
-    - for t in contract idioms; do node bindings/node/test/$t.mjs; done
-    - for t in contract idioms; do npx -y node@24 bindings/node/test/$t.mjs; done
-    - for t in contract idioms; do npx -y bun@1 bindings/node/test/$t.mjs; done
-    - for t in contract idioms; do npx -y deno@2 run -A bindings/node/test/$t.mjs; done
-    - node scripts/readme-check/check.mjs
-    # K4 spawn round trip, release build (Linux is the K4 reference).
-    - cargo build --release --workspace --bins
-    - cargo test --release -p hugr-omni --no-fail-fast -- k4
+    - node scripts/ci.mjs
 
-# Windows Server 2022 (build 20348).
-windows-2022:
-  tags: [saas-windows-medium-amd64]
-  timeout: 90m
+# Runs once a Windows runner is registered and the project variable OMNI_WINDOWS is 1.
+windows:
+  tags: [omni-windows]
+  timeout: 30m
+  rules:
+    - if: $OMNI_WINDOWS == "1"
   script:
-    - Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
-    - .\rustup-init.exe -y --default-toolchain none --profile minimal
-    - $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
-    - rustup toolchain install
-    - cargo build --workspace --bins
-    - cargo test --workspace --no-fail-fast -- $env:TEST_FILTER
-    - Invoke-WebRequest https://nodejs.org/dist/v22.20.0/node-v22.20.0-win-x64.zip -OutFile node.zip
-    - Expand-Archive node.zip -DestinationPath C:\node
-    - $env:Path = "C:\node\node-v22.20.0-win-x64;$env:Path"
-    - cargo build -p hugr-omni-node
-    - node bindings/node/test/teeth.mjs
-    - node bindings/node/test/contract.mjs
-    - node bindings/node/test/idioms.mjs
-    - node scripts/readme-check/check.mjs
+    - node scripts/ci.mjs

@@ -69,10 +69,10 @@ docker run --rm --platform linux/amd64 -v "$PWD":/w:ro -w /w node:22-bookworm-sl
 # arm64 (emulated on an Intel host): the same with --platform linux/arm64
 ```
 
-## CI (`appveyor.yml`, one step list per image, after the existing steps)
+## CI (`scripts/ci.mjs --release` runs these; the commands by hand)
 
 ```sh
-# Ubuntu2404: the musl supervisor release is already built. The addon is the one that ships: built with zig at the
+# Linux: the musl supervisor release is already built. The addon is the one that ships: built with zig at the
 # glibc 2.17 floor (never natively against the image's glibc 2.39), its floor checked, then installed and run.
 pip install --user ziglang && cargo install --locked cargo-zigbuild
 cargo zigbuild --release -p hugr-omni-node --target x86_64-unknown-linux-gnu.2.17
@@ -81,7 +81,7 @@ F=$(objdump -T target/x86_64-unknown-linux-gnu/release/libhugr_omni_node.so | gr
 node bindings/node/npm/pack.mjs dist linux-x64-gnu
 for rt in node bun deno; do HUGR_BUN="npx -y bun@1" HUGR_DENO="npx -y deno@2" node bindings/node/npm/verify.mjs dist/tarballs $rt; done
 
-# macos-sonoma (whatever its CPU is)
+# macOS (whatever its CPU is)
 T=$(rustc -vV | sed -n 's/^host: //p'); case "$T" in aarch64*) ID=darwin-arm64;; *) ID=darwin-x64;; esac
 cargo build --release -p hugr-omni-node -p omni-supervisor --target "$T"
 node bindings/node/npm/pack.mjs dist "$ID"
@@ -89,7 +89,7 @@ for rt in node bun deno; do HUGR_BUN="npx -y bun@1" HUGR_DENO="npx -y deno@2" no
 ```
 
 ```bat
-:: Visual Studio 2022 (Windows Server 2019)
+:: Windows
 cargo build --release -p hugr-omni-node -p omni-supervisor --target x86_64-pc-windows-msvc
 node bindings\node\npm\pack.mjs dist win32-x64-msvc
 node bindings\node\npm\verify.mjs dist\tarballs node

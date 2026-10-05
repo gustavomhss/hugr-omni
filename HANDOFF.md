@@ -18,10 +18,12 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
 - **Repo e CI (desde 2026-10-04):** GitLab `gmhelmold/hugr-omni` (remote `origin`, ssh; `glab` logado como
   `gmhelmold`). O GitHub (`gusmhs`, remote `github`) ficou só leitura: o Actions foi bloqueado na conta.
-  - Os minutos grátis do GitLab acabaram em 2026-10-04 (`ci_quota_exceeded`); o `.gitlab-ci.yml` fica, para quando
-    houver minutos. CI ativo: AppVeyor (conta `gustavoschneiter`, `appveyor.yml`: Ubuntu, macOS, Windows Server 2019),
-    assim que o usuário autorizar o GitLab no AppVeyor. Até lá: gates locais (macOS nativo, Linux no Docker).
-    A key do AppVeyor é do usuário: nunca no repo.
+  - CI self-hosted (sem minutos do GitLab, sem AppVeyor): `node scripts/ci.mjs` é o gate (`--release` soma o resto).
+    Runner Linux: container `hugr-omni-runner` (gitlab-runner, executor docker, config no volume
+    `hugr-omni-runner-config`; imagem dos jobs `omni-ci-linux:1` de `scripts/ci.Dockerfile`; volumes `omni-cargo`,
+    `omni-ci-target`, `omni-npm`). Tag `omni-linux`, só refs protegidas (`main`, `bundle/*`, `v*`). Runner Windows:
+    falta uma máquina (tag `omni-windows`; ligar com a variável de projeto `OMNI_WINDOWS=1`). macOS: o lead roda o
+    mesmo script na máquina dele.
   - Nunca trocar contas nem mexer em config global.
 
 ## Repo (histórico do GitHub)
@@ -74,8 +76,8 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - `bundle/B4` (não mergeada): W06b, W13, W14, Q1, W18, W18b, Q2. Gates locais verdes (macOS; Linux no Docker).
 - Revisão: o Codex acabou; revisor = agente Claude separado, só leitura (PLAN Apêndice E).
 - Para fechar o v0.1:
-  1. CI no Windows e no macOS arm64: AppVeyor espera o usuário autorizar o GitLab no AppVeyor (o GitLab ficou sem
-     minutos). Depois, merge da `bundle/B4` na `main`.
+  1. CI no Windows: falta uma máquina Windows para o runner self-hosted (decisão do usuário). macOS arm64: falta um
+     Mac Apple Silicon. Depois, merge da `bundle/B4` na `main`.
   2. K4 do Rust no macOS (tempo até o pid ~+0,7 ms): medir no CI quieto; se ficar fora, decisão do usuário.
   3. O Owner assina `docs/ux/Q2-cold-users-v0.1.md`.
   4. W21 release: publicar no npm exige o "sim" do usuário (e uma conta npm); ordem: os 5 pacotes de plataforma,
