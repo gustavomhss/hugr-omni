@@ -30,7 +30,7 @@ CODE_EXT = {
 }
 NOT_CODE_EXT = {
     ".md", ".txt", ".json", ".jsonc", ".yaml", ".yml", ".toml", ".lock",
-    ".cfg", ".ini", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico",
+    ".cfg", ".ini", ".dockerfile", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico",
 }
 NOT_CODE_NAMES = {".gitignore", ".gitattributes", ".editorconfig", ".npmignore", "LICENSE"}
 

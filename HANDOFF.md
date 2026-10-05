@@ -76,8 +76,11 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - `bundle/B4` (não mergeada): W06b, W13, W14, Q1, W18, W18b, Q2. Gates locais verdes (macOS; Linux no Docker).
 - Revisão: o Codex acabou; revisor = agente Claude separado, só leitura (PLAN Apêndice E).
 - Para fechar o v0.1:
-  1. CI no Windows: falta uma máquina Windows para o runner self-hosted (decisão do usuário). macOS arm64: falta um
-     Mac Apple Silicon. Depois, merge da `bundle/B4` na `main`.
+  1. Merge da `bundle/B4` na `main` quando o CI Linux self-hosted e o gate do macOS estiverem verdes. Decisão do
+     usuário (2026-10-04): sem runner Windows por enquanto; `darwin-arm64` publicado sem teste num Mac ARM (build
+     cruzado no Mac Intel: `rustup target add aarch64-apple-darwin`, depois `pack.mjs dist darwin-arm64`).
+     No W21, o pacote `win32-x64-msvc` precisa de uma decisão: sem máquina Windows, ou sai sem prova do W13/W14 no
+     Windows, ou fica de fora do v0.1.
   2. K4 do Rust no macOS (tempo até o pid ~+0,7 ms): medir no CI quieto; se ficar fora, decisão do usuário.
   3. O Owner assina `docs/ux/Q2-cold-users-v0.1.md`.
   4. W21 release: publicar no npm exige o "sim" do usuário (e uma conta npm); ordem: os 5 pacotes de plataforma,
