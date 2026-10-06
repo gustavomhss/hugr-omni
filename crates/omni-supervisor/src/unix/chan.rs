@@ -192,9 +192,17 @@ impl Chan {
             } else {
                 None
             };
-            match send_some(self.sock.as_fd(), rest, fd) {
+            let sent = match send_some(self.sock.as_fd(), rest, fd) {
+                // macOS refuses (EMSGSIZE) a message with a descriptor that does not fit the send buffer whole, and
+                // that buffer shrinks while the host has not read: the descriptor goes with one byte, or waits.
+                Err(e) if e.raw_os_error() == Some(libc::EMSGSIZE) && fd.is_some() => {
+                    send_some(self.sock.as_fd(), rest.get(..1).unwrap_or_default(), fd)
+                }
+                other => other,
+            };
+            match sent {
                 Ok(n) => self.sent += n,
-                Err(e) if e.raw_os_error() == Some(libc::EAGAIN) => return Ok(()),
+                Err(e) if matches!(e.raw_os_error(), Some(libc::EAGAIN | libc::EMSGSIZE)) => return Ok(()),
                 Err(_) => return Err(Closed::Gone),
             }
             if self.sent == bytes.len() {

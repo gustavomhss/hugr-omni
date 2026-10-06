@@ -233,7 +233,9 @@ fn no_sigpipe(fd: BorrowedFd<'_>) -> io::Result<()> {
     }
 }
 
-/// One `sendmsg` of `data` with `fds` as SCM_RIGHTS (retried on EINTR).
+/// One `sendmsg` of `data` with `fds` as SCM_RIGHTS (retried on EINTR). macOS refuses (EMSGSIZE) a message with
+/// descriptors that does not fit the send buffer whole, and that buffer shrinks while the supervisor has not read:
+/// then only the first byte goes with them (the caller queues the rest), or it is `WouldBlock`.
 pub(super) fn send(sock: BorrowedFd<'_>, data: &[u8], fds: &[OwnedFd]) -> io::Result<usize> {
     let mut iov = libc::iovec {
         iov_base: data.as_ptr().cast_mut().cast(),
@@ -273,7 +275,12 @@ pub(super) fn send(sock: BorrowedFd<'_>, data: &[u8], fds: &[OwnedFd]) -> io::Re
             return Ok(n);
         }
         let e = io::Error::last_os_error();
-        if e.kind() != io::ErrorKind::Interrupted {
+        if e.raw_os_error() == Some(libc::EMSGSIZE) && !fds.is_empty() {
+            if iov.iov_len <= 1 {
+                return Err(io::ErrorKind::WouldBlock.into());
+            }
+            iov.iov_len = 1;
+        } else if e.kind() != io::ErrorKind::Interrupted {
             return Err(e);
         }
     }
