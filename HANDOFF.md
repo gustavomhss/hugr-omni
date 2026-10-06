@@ -67,6 +67,18 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
 - Docker Desktop: subir com `open -a Docker` se cair; cada agente usa o próprio volume `omni-target-<WP>`.
 - O material para investidores está fora do repo: `~/Documents/HuGR/omni-investidores.html`.
 
+## Estado em 2026-10-06
+
+- De volta ao GitHub (`gustavomhss/hugr-omni`). `main` = `bundle/B4` (8f01860): v0.1 completo, CI verde em Ubuntu
+  24.04, macOS 14 arm64 e Windows 2022 (~3 min por SO).
+- O primeiro CI no macOS 14 achou um bug real: EMSGSIZE do XNU num `sendmsg` com descritores matava o canal sob
+  carga (host e supervisor). Corrigido nos dois lados (8f01860^^).
+- Q2 assinado. Demo nativa no Mac do Owner: `~/Documents/HuGR/omni-demo` (pacote npm local instalado,
+  `demo.mjs`, `arvore.mjs`, `host-morre.mjs`, guia `omni-guia.html`).
+- Falta: a validação do Owner; depois W21 (publicar no npm, com o "sim" dele); K4 do Rust no macOS ainda aberto.
+- Limpeza pendente: o runner do GitLab (container `hugr-omni-runner`, volume `hugr-omni-runner-config`, imagem
+  `omni-ci-linux:1`, volumes `omni-ci-target`/`omni-npm`) quando o Docker voltar.
+
 ## Estado em 2026-10-05 (tarde)
 
 - `bundle/B4` (não mergeada): W06b, W13, W14, Q1, W18, W18b, Q2. Gates locais verdes (macOS; Linux no Docker).
