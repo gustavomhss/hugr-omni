@@ -35,7 +35,9 @@ jobs:
           rustup toolchain install
           rustup target add ${{ matrix.addon }} ${{ matrix.supervisor }}
       - uses: Swatinem/rust-cache@v2
-        with: { key: release-${{ matrix.id }}, save-if: false }
+        with:
+          key: release-${{ matrix.id }}
+          save-if: false
       # Linux: the addon at the glibc 2.17 floor (zig), the supervisor static (musl).
       - if: runner.os == 'Linux'
         uses: mlugg/setup-zig@v2
