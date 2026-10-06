@@ -75,7 +75,11 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
   carga (host e supervisor). Corrigido nos dois lados (8f01860^^).
 - Q2 assinado. Demo nativa no Mac do Owner: `~/Documents/HuGR/omni-demo` (pacote npm local instalado,
   `demo.mjs`, `arvore.mjs`, `host-morre.mjs`, guia `omni-guia.html`).
-- Falta: a validação do Owner; depois W21 (publicar no npm, com o "sim" dele); K4 do Rust no macOS ainda aberto.
+- Validação do Owner feita (demo nativa no Mac: árvore, `kill -9` no host, timeout, PTY, sem shell). Versão 0.1.0.
+  `release.yml` (à mão) gerou e provou os 5 pacotes, cada um no seu SO e CPU (run 37509139962); tarballs em
+  `~/Documents/HuGR/hugr-omni-release/` (use o `hugr-omni-0.1.0.tgz` de um job POSIX). Publicar no npm: adiado pelo
+  Owner (2026-10-06, "deixa sem npm por hora"); quando voltar: `npm login`, os 5 de plataforma, depois `hugr-omni`, e
+  tirar `PRE_RELEASE_INSTALL` e o aviso de pre-release do README. K4 do Rust no macOS ainda aberto.
 - Limpeza pendente: o runner do GitLab (container `hugr-omni-runner`, volume `hugr-omni-runner-config`, imagem
   `omni-ci-linux:1`, volumes `omni-ci-target`/`omni-npm`) quando o Docker voltar.
 
