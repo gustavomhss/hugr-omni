@@ -54,4 +54,4 @@ TypeScript needs `@types/node` for `process`; a Ctrl-C to a silent command in a 
 
 The full user reports and their scripts are kept with the lead's review records.
 
-Signed by the owner: ______________________
+Signed by the owner on 2026-10-06 ("assino o relatório", in the session chat).

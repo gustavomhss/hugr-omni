@@ -6,11 +6,11 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/gmhelmold/hugr-omni.git",
+    "url": "git+https://github.com/gustavomhss/hugr-omni.git",
     "directory": "bindings/node"
   },
-  "homepage": "https://gitlab.com/gmhelmold/hugr-omni#readme",
-  "bugs": "https://gitlab.com/gmhelmold/hugr-omni/-/issues",
+  "homepage": "https://github.com/gustavomhss/hugr-omni#readme",
+  "bugs": "https://github.com/gustavomhss/hugr-omni/issues",
   "type": "commonjs",
   "main": "index.js",
   "types": "index.d.ts",

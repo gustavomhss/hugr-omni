@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The CI gate: one step list for every OS, run the same way by the self-hosted runners (.gitlab-ci.yml) and by hand.
+// The CI gate: one step list for every OS, run the same way by GitHub Actions (.github/workflows/ci.yml) and by hand.
 //
 //   node scripts/ci.mjs            the fast gate (every push to main and bundle/*): static checks, clippy, the Rust suite
 //                                  with the contract, and the contract and idioms through the TS binding on Node 22
@@ -15,7 +15,7 @@ const os = { linux: "linux", darwin: "darwin", win32: "windows" }[process.platfo
 const release = process.argv.includes("--release") || process.env.RELEASE === "1" || /^v/.test(process.env.CI_COMMIT_TAG ?? "");
 const target = process.env.CARGO_TARGET_DIR ?? "target";
 const filter = (process.env.TEST_FILTER ?? "").split(" ").filter(Boolean);
-const unix = ["linux", "darwin"];
+const lint = ["linux"];
 const npx = (...a) => ["npx", "-y", ...a];
 const tsc = (p) => npx("-p", "typescript@5", "tsc", "-p", p);
 
@@ -26,21 +26,19 @@ function host() {
 // Each step: a name, a command (array, run without a shell) or a function, the OSes it runs on, and whether only a
 // release runs it.
 const steps = [
-  // Static checks: the same on every OS, so only the Unix jobs run them. Linux also checks the Windows code compiles,
-  // for when the Windows runner is offline.
-  { name: "file-size guard", on: unix, cmd: ["python3", "scripts/file-size-guard.py"] },
-  { name: "file-size guard (own tests)", on: unix, cmd: ["python3", "scripts/test_file_size_guard.py"] },
-  { name: "plan sections", on: unix, cmd: ["python3", "scripts/plan-sections-check.py"] },
-  { name: "rustfmt", on: unix, cmd: ["cargo", "fmt", "--all", "--", "--check"] },
-  { name: "surface checks (own tests)", on: unix, release: true, cmd: ["node", "--test", "scripts/surface-check/surface.test.mjs", "scripts/guarantees-check/check.test.mjs"] },
-  { name: "surface parity", on: unix, cmd: ["node", "scripts/surface-check/parity.mjs"] },
-  { name: "binding surface", on: unix, cmd: ["node", "scripts/surface-check/binding.mjs"] },
-  { name: "guarantees ledger", on: unix, cmd: ["node", "scripts/guarantees-check/check.mjs"] },
-  { name: "docs blocks (static)", on: unix, cmd: ["node", "scripts/readme-check/check.mjs", "--static"] },
-  { name: "tsc", on: unix, cmd: tsc("bindings/node/tsconfig.json") },
-  { name: "tsc (tests)", on: unix, cmd: tsc("bindings/node/test/tsconfig.json") },
+  // Static checks: the same on every OS, so only Linux runs them.
+  { name: "file-size guard", on: lint, cmd: ["python3", "scripts/file-size-guard.py"] },
+  { name: "file-size guard (own tests)", on: lint, cmd: ["python3", "scripts/test_file_size_guard.py"] },
+  { name: "plan sections", on: lint, cmd: ["python3", "scripts/plan-sections-check.py"] },
+  { name: "rustfmt", on: lint, cmd: ["cargo", "fmt", "--all", "--", "--check"] },
+  { name: "surface checks (own tests)", on: lint, release: true, cmd: ["node", "--test", "scripts/surface-check/surface.test.mjs", "scripts/guarantees-check/check.test.mjs"] },
+  { name: "surface parity", on: lint, cmd: ["node", "scripts/surface-check/parity.mjs"] },
+  { name: "binding surface", on: lint, cmd: ["node", "scripts/surface-check/binding.mjs"] },
+  { name: "guarantees ledger", on: lint, cmd: ["node", "scripts/guarantees-check/check.mjs"] },
+  { name: "docs blocks (static)", on: lint, cmd: ["node", "scripts/readme-check/check.mjs", "--static"] },
+  { name: "tsc", on: lint, cmd: tsc("bindings/node/tsconfig.json") },
+  { name: "tsc (tests)", on: lint, cmd: tsc("bindings/node/test/tsconfig.json") },
   { name: "clippy", cmd: ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"] },
-  { name: "clippy (windows target)", on: ["linux"], cmd: ["cargo", "clippy", "--workspace", "--all-targets", "--target", "x86_64-pc-windows-msvc", "--", "-D", "warnings"] },
 
   // The suite on this OS.
   { name: "build", cmd: ["cargo", "build", "--workspace", "--bins"] },

@@ -39,10 +39,10 @@ CommonJS works too: `const { run, spawn } = require("hugr-omni")`. `await using`
 
 ## More
 
-- Source, issues and the Rust core: https://gitlab.com/gmhelmold/hugr-omni
+- Source, issues and the Rust core: https://github.com/gustavomhss/hugr-omni
 - Recipes for agents (dev server, tests with a timeout, interactive terminal, cleanup; `env`, `inheritEnv`, `cwd`,
-  `stdin`, `mergeStderr`, reading a result, a shell): https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/docs/guide/recipes.md
-- Every function, option and result field: https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/docs/api-contract.md
-- What holds on each OS, and the evidence: https://gitlab.com/gmhelmold/hugr-omni/-/blob/main/GUARANTEES.md
+  `stdin`, `mergeStderr`, reading a result, a shell): https://github.com/gustavomhss/hugr-omni/blob/main/docs/guide/recipes.md
+- Every function, option and result field: https://github.com/gustavomhss/hugr-omni/blob/main/docs/api-contract.md
+- What holds on each OS, and the evidence: https://github.com/gustavomhss/hugr-omni/blob/main/GUARANTEES.md
 
 Licensed under either of Apache License 2.0 or MIT, at your option.

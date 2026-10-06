@@ -26,7 +26,7 @@ after(() => made.forEach((d) => rmSync(d, { recursive: true, force: true })));
 const fence = (info, ...lines) => `\`\`\`${info}\n${lines.join("\n")}\n\`\`\`\n`;
 const TS = fence("ts quickstart", 'import { run } from "hugr-omni";', 'console.log(typeof run);');
 const RUST = fence("rust quickstart", "fn main() {}");
-const GIT = "https://gitlab.com/gmhelmold/hugr-omni";
+const GIT = "https://github.com/gustavomhss/hugr-omni";
 const DEPS = fence("toml", "[dependencies]", `hugr-omni = { git = "${GIT}" }`, 'tokio = { version = "1", features = ["macros", "rt-multi-thread"] }');
 const INSTALL = fence("sh", "npm install hugr-omni     # Node", "bun add hugr-omni");
 const README = `# title\n\n${TS}\nprose\n\n${DEPS}\n${RUST}\n## Install\n\n${INSTALL}\n${fence("text", "sample output")}`;
@@ -80,7 +80,7 @@ test("static: only the READMEs' literal install lines under ## Install stay unex
 });
 
 test("static: a rust block takes its dependencies from the toml block before it, which must name the git URL of hugr-omni", () => {
-  expects(rules(README.replace(`git = "${GIT}"`, 'git = "https://gitlab.com/gmhelmold/hugr-omin"')), 1, "names the git URL https://gitlab.com/gmhelmold/hugr-omin", "repository of Cargo.toml (https://gitlab.com/gmhelmold/hugr-omni)");
+  expects(rules(README.replace(`git = "${GIT}"`, 'git = "https://github.com/gustavomhss/hugr-omin"')), 1, "names the git URL https://github.com/gustavomhss/hugr-omin", "repository of Cargo.toml (https://github.com/gustavomhss/hugr-omni)");
   expects(rules(README.replace(`git = "${GIT}"`, `git = "${GIT}.git"`)), 1, "not the repository of Cargo.toml");
   expects(rules(README.replace(DEPS, "")), 1, "a rust block needs a toml block before it");
   expects(rules(README.replace("[dependencies]", "[dev-dependencies]")), 1, "must start with `[dependencies]`");

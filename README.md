@@ -56,7 +56,7 @@ with git, plus `tokio` with the features `#[tokio::main]` needs:
 
 ```toml
 [dependencies]
-hugr-omni = { git = "https://gitlab.com/gmhelmold/hugr-omni" }
+hugr-omni = { git = "https://github.com/gustavomhss/hugr-omni" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 

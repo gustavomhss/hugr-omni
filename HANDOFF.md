@@ -16,15 +16,10 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
     `wp/<id>`;
   - revisão: um agente Claude separado (contexto novo, só leitura) contra o card do WP (o Codex acabou em 2026-10-05);
   - brief e prompt da revisão: `scripts/brief.py` e `scripts/review-prompt.py`, gerados do card vivo no PLAN.
-- **Repo e CI (desde 2026-10-04):** GitLab `gmhelmold/hugr-omni` (remote `origin`, ssh; `glab` logado como
-  `gmhelmold`). O GitHub (`gusmhs`, remote `github`) ficou só leitura: o Actions foi bloqueado na conta.
-  - CI self-hosted (sem minutos do GitLab, sem AppVeyor): `node scripts/ci.mjs` é o gate (`--release` soma o resto).
-    Runner Linux: container `hugr-omni-runner` (gitlab-runner, executor docker, config no volume
-    `hugr-omni-runner-config`; imagem dos jobs `omni-ci-linux:1` de `scripts/ci.Dockerfile`; volumes `omni-cargo`,
-    `omni-ci-target`, `omni-npm`). Tag `omni-linux`, só refs protegidas (`main`, `bundle/*`, `v*`). Runner Windows:
-    falta uma máquina (tag `omni-windows`; ligar com a variável de projeto `OMNI_WINDOWS=1`). macOS: o lead roda o
-    mesmo script na máquina dele. Nada roda no push: o lead dispara um pipeline por bundle (`glab ci run -b <branch>`,
-    ou pela API); o job fica em 2 CPUs e 4 GB.
+- **Repo e CI (desde 2026-10-06):** GitHub `gustavomhss/hugr-omni` (público, remote `github`, https; `gh` ativo como
+  `gustavomhss`). CI: GitHub Actions (`.github/workflows/ci.yml`, Ubuntu, macOS 14 arm64, Windows 2022), um script só
+  (`node scripts/ci.mjs`, `--release` soma o pesado). O GitLab (`origin`, `gmhelmold/hugr-omni`) ficou só leitura; o
+  runner self-hosted de lá (container `hugr-omni-runner`) deve ser removido quando o Docker voltar.
   - Nunca trocar contas nem mexer em config global.
 
 ## Repo (histórico do GitHub)
@@ -83,8 +78,8 @@ o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "o
      No W21, o pacote `win32-x64-msvc` precisa de uma decisão: sem máquina Windows, ou sai sem prova do W13/W14 no
      Windows, ou fica de fora do v0.1.
   2. K4 do Rust no macOS (tempo até o pid ~+0,7 ms): medir no CI quieto; se ficar fora, decisão do usuário.
-  3. O Owner assina `docs/ux/Q2-cold-users-v0.1.md`.
-  4. W21 release: publicar no npm exige o "sim" do usuário (e uma conta npm); ordem: os 5 pacotes de plataforma,
+  3. Q2 assinado pelo Owner em 2026-10-06.
+  4. W21 release: o Owner decidiu (2026-10-06) publicar no npm só depois de validar o pacote; publicar exige o "sim" do usuário (e uma conta npm); ordem: os 5 pacotes de plataforma,
      depois `hugr-omni`; tirar `PRE_RELEASE_INSTALL` do readme-check.
 
 ## Estado em 2026-10-05
