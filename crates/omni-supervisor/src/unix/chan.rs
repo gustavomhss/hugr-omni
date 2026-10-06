@@ -316,9 +316,15 @@ mod tests {
 
     use super::adopt;
 
-    fn open(fd: RawFd) -> bool {
-        // SAFETY: F_GETFD only queries the descriptor table.
-        unsafe { libc::fcntl(fd, libc::F_GETFD) != -1 }
+    /// The (device, inode) behind `fd`, or `None` when it is closed.
+    fn ident(fd: RawFd) -> Option<(u64, u64)> {
+        // SAFETY: an all-zero `stat` is a valid buffer; fstat only writes into it.
+        let mut st: libc::stat = unsafe { std::mem::zeroed() };
+        // SAFETY: fstat on a descriptor number; a closed one is EBADF.
+        match unsafe { libc::fstat(fd, &raw mut st) } {
+            0 => Some((st.st_dev as u64, st.st_ino as u64)),
+            _ => None,
+        }
     }
 
     /// A configuration failure in the middle of a batch closes every descriptor of the batch.
@@ -330,7 +336,9 @@ mod tests {
             .flat_map(|(r, w)| [OwnedFd::from(r), OwnedFd::from(w)])
             .collect();
         let raw: Vec<RawFd> = batch.iter().map(AsRawFd::as_raw_fd).collect();
-        assert!(raw.iter().all(|&fd| open(fd)));
+        // Other tests open descriptors meanwhile and may get these numbers again: compare identities, not numbers.
+        let ids: Vec<_> = raw.iter().map(|&fd| ident(fd)).collect();
+        assert!(ids.iter().all(Option::is_some));
         let second = raw[1];
         let failing = |fd: std::os::fd::BorrowedFd<'_>| {
             if fd.as_raw_fd() == second {
@@ -340,7 +348,10 @@ mod tests {
             }
         };
         assert!(adopt(batch, failing).is_err());
-        assert!(raw.iter().all(|&fd| !open(fd)), "a received descriptor leaked: {raw:?}");
+        assert!(
+            raw.iter().zip(&ids).all(|(&fd, id)| ident(fd) != *id),
+            "a received descriptor leaked: {raw:?}"
+        );
 
         let (r, w) = std::io::pipe().unwrap();
         let ok = adopt(vec![OwnedFd::from(r), OwnedFd::from(w)], |fd| {

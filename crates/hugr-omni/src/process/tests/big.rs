@@ -10,7 +10,8 @@ use crate::api::Command;
 fn a_spawn_with_a_large_environment_starts() {
     use_supervisor();
     let fixture = binary("omni-fixture");
-    let big = "x".repeat(256 * 1024);
+    // 64 KiB: far above the 8 KiB socket buffer, under Linux's 128 KiB limit for one environment string.
+    let big = "x".repeat(64 * 1024);
     block(async {
         let mut cmd = Command::new(&fixture);
         cmd.arg("getenv=OMNI_BIG")

@@ -215,9 +215,26 @@ fn tasklist(pid: u32) -> bool {
 
 /// Every pid is dead per the OS within `within` (zero: right now).
 fn assert_dead(pids: &[u32], within: Duration) {
+    assert_dead_of(pids, within, None);
+}
+
+/// `assert_dead` for pids logged to `log` while other tests run fixtures too: on Windows, a pid only counts while
+/// its command line still names `log` (a freed pid goes at once to another test's `omni-fixture`).
+fn assert_dead_logged(pids: &[u32], within: Duration, log: &Path) {
+    assert_dead_of(pids, within, Some(log));
+}
+
+fn assert_dead_of(pids: &[u32], within: Duration, log: Option<&Path>) {
     let deadline = Instant::now() + within;
     loop {
-        let living: Vec<u32> = pids.iter().copied().filter(|&p| alive(p)).collect();
+        let mut living: Vec<u32> = pids.iter().copied().filter(|&p| alive(p)).collect();
+        if let Some(log) = log.filter(|_| !living.is_empty() && std::env::consts::OS == "windows") {
+            let name = log
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            living.retain(|&p| command_line(p).contains(&name));
+        }
         if living.is_empty() {
             return;
         }
@@ -250,4 +267,14 @@ fn describe(pids: &[u32]) -> String {
         Ok(out) => format!("\n{}", String::from_utf8_lossy(&out.stdout).trim()),
         Err(e) => format!("\n(powershell: {e})"),
     }
+}
+
+/// Windows: the command line of `pid` now, empty when no process has it.
+fn command_line(pid: u32) -> String {
+    let query = format!("(Get-CimInstance Win32_Process -Filter 'ProcessId={pid}').CommandLine");
+    Command::new("powershell")
+        .args(["-NoProfile", "-Command", &query])
+        .output()
+        .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
+        .unwrap_or_default()
 }

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use super::deadline::pids_in;
-use super::{assert_dead, binary, log_path, pidlog, use_supervisor};
+use super::{assert_dead_logged, binary, log_path, pidlog, use_supervisor};
 use crate::types::Reason;
 use crate::{CancellationToken, Command, ErrorCode};
 
@@ -52,7 +52,7 @@ fn an_agent_loop_leaves_nothing_behind() {
         "only {} pids logged for {started} commands",
         pids.len()
     );
-    assert_dead(&pids, Duration::from_secs(2));
+    assert_dead_logged(&pids, Duration::from_secs(2), &log);
     let _ = std::fs::remove_file(&log);
 }
 
