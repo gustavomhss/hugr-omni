@@ -1,6 +1,6 @@
 {
   "name": "hugr-omni",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Run processes and terminals with identical, tested behavior on Windows, macOS and Linux.",
   "keywords": ["process", "spawn", "child_process", "pty", "terminal", "process-tree", "cross-platform", "agents"],
   "license": "MIT OR Apache-2.0",
@@ -19,10 +19,10 @@
     "node": ">=22"
   },
   "optionalDependencies": {
-    "hugr-omni-win32-x64-msvc": "0.0.0",
-    "hugr-omni-darwin-arm64": "0.0.0",
-    "hugr-omni-darwin-x64": "0.0.0",
-    "hugr-omni-linux-x64-gnu": "0.0.0",
-    "hugr-omni-linux-arm64-gnu": "0.0.0"
+    "hugr-omni-win32-x64-msvc": "0.1.0",
+    "hugr-omni-darwin-arm64": "0.1.0",
+    "hugr-omni-darwin-x64": "0.1.0",
+    "hugr-omni-linux-x64-gnu": "0.1.0",
+    "hugr-omni-linux-arm64-gnu": "0.1.0"
   }
 }
