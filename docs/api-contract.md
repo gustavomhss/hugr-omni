@@ -220,3 +220,66 @@ Exit / RunResult · OmniError.
   (`pid`, `parent_pid`, `name`).
   **`Drop` force-kills the tree immediately and does not block**; reaping runs on a dedicated thread, not on
   the tokio runtime, so it also works after the runtime shut down (INV-16).
+
+## Amendment WP-H (approved by the lead, 2026-10-06)
+
+Additive; written by WP-H, approved by the lead at merge. Nothing above changes meaning. The
+glossary keeps its 15 concepts: `configure` is placed under *spawn* and `backpressure` under *output*
+(`scripts/surface-check/parity.txt`).
+
+- **`configure({ addon?, supervisor? })`** (TS only). Says where the native addon and the supervisor are.
+  - Call it before the first `run()` or `spawn()` of the JS environment; it loads the addon at once. Afterwards it
+    throws `INVALID_ARGUMENT`. So does a value that is not a non-empty string, a different `addon` once one is loaded,
+    and a different `supervisor` once this process started a supervisor (one supervisor serves every JS environment of
+    a process; the same path again is fine).
+  - The addon loads lazily: at the first `configure()`, `run()` or `spawn()`, never at `require`. Its path, in order:
+    `configure({ addon })`; `HUGR_OMNI_ADDON` as `process.env` holds it; the installed platform package; this
+    checkout's Cargo build, only when no path was given at all (no `configure()` path, no variable).
+  - The supervisor, in order: `configure({ supervisor })`; `HUGR_OMNI_SUPERVISOR` as `process.env` holds it; next to
+    the module, only when that directory (and the binary in it) belongs to the user or root and is writable by neither
+    group nor others (Unix; Windows keeps the candidate, see `client/start.rs`); next to the executable as started,
+    then next to its canonical path (a symlinked install).
+  - Rust: the same supervisor order without `configure`; `HUGR_OMNI_SUPERVISOR` is read from the C environment.
+- **`inheritEnv: true` inherits the environment the language sees.** In TS that is `process.env` at the call, on Node,
+  Bun and Deno alike (Bun's `process.env` writes reach no C environment). `env` is merged over it; on Windows names
+  compare ignoring case, so one spelling of each variable reaches the child (`Path` or `PATH`, never both: `env`'s
+  spelling wins). `inheritEnv: false` and the Windows `SystemRoot` rule (§3) are unchanged.
+- **`backpressure: true`** (`spawn()` with pipes; Rust `Command::backpressure(true)`; ignored by `run()` and by a
+  terminal). While a consumer is attached and 16 MiB of a stream wait for it, the library stops reading that stream:
+  the pipe fills and the child blocks on its writes. Nothing is dropped, no `lostBefore` appears. With no consumer
+  attached the §4 budget applies (1 MiB kept, the rest dropped and counted). `wait()` and `stop()` never wait for the
+  consumer: `stop()` ends the tree as always, and detaching, `stop()` or the end of the tree lets the readers go.
+- **One pull hands over every queued item.** The TS iteration of `output` / `lines()` is unchanged (one item per step),
+  but each round trip to the addon takes everything queued by then, so a burst costs one round trip, not one per chunk.
+- **A JS environment that ends stops its trees.** When a `Worker` (or any JS environment) that spawned children is
+  torn down, its children's trees are force-stopped before the teardown returns (bounded, 5 s), as the end of the host
+  process does through the supervisor. The garbage collector still never kills a child (§5).
+
+## Amendment WP8b (approved by the lead, 2026-10-07)
+
+Additive; written by WP8b, for the lead to approve at merge. Nothing above changes meaning. The glossary keeps its 15
+concepts: `windowsVerbatimArgs` is placed under *spawn* (`scripts/surface-check/parity.txt`), because it says how the
+program is started, not what it receives.
+
+- **`windowsVerbatimArgs?: string`** (`CommonOptions`, so `run()` and `spawn()`, pipes and terminals; Rust
+  `Command::windows_verbatim_args(tail)`). For a Windows program that parses its own command line, such as `cmd.exe`:
+  the child's command line is `command` in double quotes (the same `argv[0]` as without the option), then, unless the
+  text is empty, a space and the text **unchanged**: no quoting, no escaping (Rust std's `CommandExt::raw_arg`).
+  - **Still no shell.** The library never adds `cmd.exe` or any flag. Which file runs is decided only by `command`,
+    resolved as in §3; to run a command line through cmd.exe the caller names `cmd.exe` itself, e.g.
+    `run("cmd.exe", [], { windowsVerbatimArgs: '/d /s /c "echo a&echo b"' })`. What cmd.exe then does with `&`, `|`,
+    `%` and quotes is cmd.exe's own parsing of a line the caller wrote.
+  - **`INVALID_ARGUMENT`, before anything runs:**
+    - on any system but Windows. A Unix child gets a list of arguments, not a command line, and ignoring the option
+      would start the program without the arguments the caller wrote. Failing names the mistake at once; a portable
+      caller sets the option only where `process.platform === "win32"`;
+    - together with a non-empty `args`: the text is the whole command line after the program;
+    - when the text contains NUL (the text itself is never shown in the message);
+    - when `command` resolves to a `.cmd`/`.bat` (by its last component, ignoring case and trailing dots and spaces).
+      Windows would run a batch file through cmd.exe with the caller's text unescaped, so the caller names cmd.exe and
+      writes the batch file into the text. Without the option, §3's batch-safe rule is unchanged.
+  - The supervisor checks the same three Windows rules again (protocol v2, `docs/protocol.md`).
+- **Proof.** `conformance/scenarios/C-SPAWN-02.verbatim.json` (Windows: `cmd.exe /d /s /c "echo a&echo b"` prints two
+  lines; a fixture receives `"a b" c\"d %PATH% x&y` as four arguments; each refusal) and
+  `C-SPAWN-02.verbatim-unix.json` (Linux, macOS: refused). The C-SPAWN-02 item covers it: arguments arrive as the
+  caller wrote them, here as a command line, and the library interprets no metacharacter.

@@ -57,6 +57,16 @@ impl Command {
         self
     }
 
+    /// Windows only (amendment WP8b): the exact command line after the program, for a program that parses its own
+    /// command line (e.g. `cmd.exe` with `/d /s /c "..."`). The child's command line is `argv[0]` in quotes, a space
+    /// and `tail`, unchanged: no quoting, no escaping, and the library still adds no shell. It fails with
+    /// `InvalidArgument` on other systems, together with `arg`/`args`, with a NUL, or when the program resolves to a
+    /// `.cmd`/`.bat` (name `cmd.exe` yourself).
+    pub fn windows_verbatim_args(&mut self, tail: impl AsRef<OsStr>) -> &mut Self {
+        self.req.verbatim = Some(tail.as_ref().to_os_string());
+        self
+    }
+
     /// Working directory of the child (default: the host's). A relative path resolves against the host's.
     pub fn cwd(&mut self, dir: impl AsRef<Path>) -> &mut Self {
         self.req.cwd = Some(dir.as_ref().to_path_buf());
@@ -128,6 +138,16 @@ impl Command {
     /// `run()` only: per-stream limit (default 16 MiB); above it `run()` fails with `OutputLimit`.
     pub fn max_output_bytes(&mut self, bytes: usize) -> &mut Self {
         self.opts.max_output_bytes = bytes;
+        self
+    }
+
+    /// `spawn()` with pipes only (default `false`): while a consumer is attached and a stream has 16 MiB waiting
+    /// for it, the library stops reading that stream instead of dropping, so the pipe fills and the child blocks
+    /// on its writes; nothing is ever lost and no `lost_before` appears. With no consumer attached the usual
+    /// budget applies. `wait()` and `stop()` never depend on the consumer: `stop()` still ends the tree, and
+    /// detaching or stopping lets the output go. Ignored by `run()` and by terminals.
+    pub fn backpressure(&mut self, yes: bool) -> &mut Self {
+        self.opts.backpressure = yes;
         self
     }
 

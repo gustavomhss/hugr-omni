@@ -11,6 +11,7 @@ mod go;
 mod identity;
 #[cfg(unix)]
 mod ledger;
+mod lookup;
 #[cfg(unix)]
 mod unix;
 #[cfg(windows)]
@@ -67,6 +68,7 @@ fn spec(pty: bool) -> Spec {
         stdin: Stdin::Pipe,
         merge_stderr: false,
         grace: Duration::from_millis(1500),
+        verbatim: None,
     }
 }
 

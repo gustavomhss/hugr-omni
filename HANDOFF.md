@@ -1,5 +1,81 @@
 # HANDOFF — estado do hugr-omni (2026-10-02, tarde)
 
+## Landing WP9a no Orchestra — 2026-10-10
+
+Esta seção substitui o estado de retomada anterior. Worktree `omni-native`; candidato final verificado
+`c97e1a7283610c582e3e482a101e9f453ea1bab5`, reconciliado com `dev` até `d6a58a0296`. Owner autorizou reconciliação/merge do PR #73: **"ok manda bala.
+paraleliza o que puder, vamos resolver isso logo"**, depois **"siga"**.
+
+- Epic final `38071818809`, typecheck `38071010416`, Electron real `38071013779`, CLI `38071010746` e native
+  `38071010790` verdes em `c97e1a7283`. Cache hits não são execução nova; todos artifacts/lanes continuam obrigatórios.
+- Delivery `38071010760` passou na tentativa 3: V9 Windows perdeu o limite de 2 s na primeira; macOS recusou carga
+  nas tentativas 1/2, sem KPI completo. Retentativas mantêm fonte, assertions, deadlines e KPI.
+- União do BackgroundJob revisada: extensão não começa após falha. Fixture agora segura cleanup de tentativa
+  iniciada durante reutilização do ID; isso não prova o guard de token de settlement antigo. Mutação da ordem
+  rejeitada em `38069015137`, restauração `38069253793`; adoção real e controles portáveis em `38067064470`/`38067064731`.
+- Checkpoints/evento público novos da `dev` reconciliados. Gerador SDK particiona seis aliases, preservando tipos
+  públicos e teto existente: 16575 LOC, máximo 16592. Revisão fria e compiler probe: vermelho `38071401680`, verde
+  `38071613961`. Client e SDK regenerados pelos comandos oficiais; nenhuma edição manual de generated.
+- Builder publica `.complete` só após saída executável válida. Shell adota após exit zero/finalização; job mantém
+  broker/scratch até parada. Broker Node via AppProcess, sem exceção nova no spawn ledger. Revisões/probes medidos.
+- Quit desktop usa ID causal autenticado/atômico, não ordem entre relógios de processos. ID estrangeiro rejeitado
+  nos três SOs (`38057262233`); logger/capture seguem caminho real do onboarding, tracing padrão desligado.
+- Relatório final: `docs/ux/WP9a-default-on.md`. Restam landing/post-merge do PR; WP9b espera release limpa.
+  npm/Developer ID/notarização seguem os adiamentos explícitos. Não relabelar PTY 500 anterior como corrigido.
+
+## Retomada no Orchestra — 2026-10-09
+
+Esta seção substitui os pontos de retomada históricos abaixo. A fonte da integração é `packages/omni` no
+`gustavomhss/hugr-orchestra`; o repositório separado é o espelho. Worktree ativa:
+`~/Documents/HuGR/_worktrees/omni-native`; produto verificado `f036dca9a4`, reparos CI `fc41e41a68`. Branch de integração do PR #73
+(draft): `omni-native`. O relatório lista as revisões verificadas e os gates ainda pendentes.
+
+- O rename da `dev` foi reconciliado: pacote `packages/orchestra`, imports `@orchestra/*`, flag
+  `ORCHESTRA_EXPERIMENTAL_OMNI_SPAWNER`. Publicação npm continua adiada. Candidato seleciona Omni por default;
+  `=0` mantém rollback legado. Alvos compilados sem suporte nativo continuam no legado.
+- Código revisado e integrado: instalações via AppProcess, settlement de falhas de startup, cancelamento e staging;
+  reinício LSP com fence de descarte; join de shutdown; preflight de arquivos nativos antes da árvore da CLI;
+  inventário Windows por identidade/owner e deadline completo de ConPTY.
+- Otimização Linux: `getsid` rejeita processos alheios antes da leitura de stat; stat continua a autoridade para os
+  membros. ABI, unidade de sessão e garantias permanecem iguais. V7 de 1000 pares passou; baseline restaurado como
+  mutação deixou o KPI vermelho.
+- Campanha reproduzível em `campaign/`, instruções em `campaign/README.md`, relatório parcial em
+  `docs/ux/WP10-orchestra-integration.md`. Typecheck completo: de `packages/core`,
+  `bun typecheck --project ../omni/campaign/tsconfig.json`.
+- `fork/dev` (`ad40b080e9`) foi integrado por merge, incluindo capability/seat framework. O conflito semântico no
+  builder de saída natural foi corrigido: usa `seatSkillsFiles`, `ORCHESTRA_COMPILED=true` e hashes do módulo gerado.
+  Core, Orchestra e campanha passaram typecheck; revisão fria aprovou os pontos de união.
+- Provas anteriores, produto `50df6ac76a`: CLI compilada (`37886935451`) e Electron real (`37886938068`) nos três SOs.
+  Electron prova crash de main/utility e app.quit natural; packaging é unsigned --dir, sem prova de notarização.
+- Saída natural Bun/Node + controles de seats: `37886081319`, 26 testes por SO. Windows V1/V2/V10 restaurado:
+  `37887074886`, incluindo dois Esc reais e Ctrl+C. Remover SIGINT/SIGBREAK deixou `37866045782` vermelho.
+- V3–V6 verdes nos três SOs (`37866046448`); oito alvos nativos provados (`37799127882`). Raw POSIX é
+  receiver-ACK; raw ConPTY permanece unsupported, com cooked/render testado. Não confundir isso com burst raw lossless.
+- V7 macOS Intel/x64 fechado (`37832187161`): legado 9,89377 ms; Omni 11,30649 ms; limite 11,89377 ms. Slowdown
+  real de 5 ms foi rejeitado. Recusas/execuções ARM incompletas permanecem unrun; KPI inalterado.
+- Owner autorizou adiar Developer ID/notarização para uso local sem Apple Developer: **"go on"**. Waiver com alcance
+  e remediação no relatório WP10. Não autoriza distribuição notarizada nem publicação npm.
+- Owner aceitou o relatório para o escopo local em 2026-10-09: **"eai, pode seguir"**, respondendo à pergunta de
+  assinatura. WP9a autorizado; npm/distribuição pública continuam fora desse aceite.
+- WP9a provisiona artifacts nativos em cada shard, preserva/hash inputs Rust e helpers de campanha, valida arquivos
+  também em cache hits e mantém lane Windows `=0`. Turbo strict preserva/hash `PSModuleAnalysisCachePath`: remover
+  entrada deixou recorder vermelho; alteração/restauração de helper agora muda/recupera hash Core.
+- Produto `f036dca9a4`: CLI (`38005242768`) e Electron unsigned (`38004541043`) nos três SOs; delivery
+  (`38005245577`, tentativa 2), V9 três SOs/V8 Server 2022/V7 Linux e Intel. Recusa por carga na tentativa 1 preservada.
+  Full typecheck `38004544234`. Reparos posteriores só CI/harness; não são novos binários medidos.
+- Boundary Mac do owner executado: V2 CLI `d4a32678c6`, V7 Bun `feeb526787`; hashes e KPIs em
+  `docs/ux/WP9a-default-on.md`. Não atribuir essas medições a binário novo `f036dca9a4`.
+- Epic completa verde em `fc41e41a68` (`38014329741`): producers/consumers, unit Linux/Windows, e2e Linux,
+  Atlas, godfile, HttpApi, Relay e Windows `=0`. Core Windows executou sem cache: 1524 pass/29 skips existentes.
+  Relatório WP9a revisado; candidato integrado por fast-forward no `omni-native` e PR #73 (draft).
+  WP9b continua depois de uma release limpa. Artefatos dos oito alvos não habilitam sozinhos as rows CLI desativadas.
+- Provas brutas locais anteriores foram preservadas nas worktrees `omni-campaign`, `omni-protocol-qa` e
+  `omni-delivery-qa` (`campaign/logs`, ignorado). Não apagar esses logs antes de arquivar as evidências.
+- O binário desktop de nome legado ficou sem ignore após o rename; foi preservado fora do snapshot como
+  `omni-legacy-desktop-cli-c8a77c4c93`, no diretório temporário autorizado pelo harness. Não subir esse binário de
+  159 MB pelo test:ci.
+
+
 Arquivo para retomar o trabalho depois de uma compactação de contexto ou de uma sessão que caiu. A fonte da verdade é
 o `PLAN.md` (status na seção 8, decisões no Apêndice E). Aqui está só o "onde parei".
 
